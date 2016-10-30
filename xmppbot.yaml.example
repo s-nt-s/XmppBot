@@ -1,0 +1,4 @@
+user: 'bot@xmpp.jp'
+pass: 'password'
+roster: ['me@xmpp.jp']
+LOG: "DEBUG"
