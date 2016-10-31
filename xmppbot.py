@@ -50,7 +50,7 @@ class Bot(sleekxmpp.ClientXMPP):
         self.register_plugin('xep_0203') # XMPP Delayed messages
         self.register_plugin('xep_0199') # XMPP Ping
         self.add_event_handler("session_start", self.start)
-        self.add_event_handler("message", self.message)
+        self.add_event_handler("message", self.read_message)
         logging.basicConfig(level=self.config.get('LOG',logging.INFO), format='%(levelname)-8s %(message)s')
         self.log = logging.getLogger()
         self.custom_roster = self.config.get('roster')
@@ -115,7 +115,7 @@ class Bot(sleekxmpp.ClientXMPP):
                 return c, text.split(' ')[1:]
         return None, None
 
-    def message(self, msg):
+    def read_message(self, msg):
         if msg['type'] in ('chat', 'normal') and msg['body'] and msg['from']:
             text = msg['body'].strip()
             cmd, args = self.get_cmd(msg)
@@ -132,6 +132,16 @@ class Bot(sleekxmpp.ClientXMPP):
                 reply = self.MSG_ERROR_OCCURRED
             if reply:
                 msg.reply(reply).send()
+
+    def write_message(msg, to=None, tp='chat'):
+        if to is None:
+            to=self.config.get("sendto")
+        if not to or len(to)==0:
+            return
+        for t in to:
+            self.send_message(mto=t,
+                              mbody=msg,
+                              mtype=tp)
 
     def is_delay(sefl, msg):
         return bool(msg['delay']._get_attr('stamp'))
