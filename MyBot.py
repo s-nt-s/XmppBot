@@ -21,7 +21,8 @@ else:
 
 class MyBot(Bot):
 
-    def is_torrent(self, parse):
+    def is_torrent(self, url):
+        parse=urlparse(url)
         if parse.scheme == "magnet":
             return True
         if len(parse.path)>8 and parse.path[-8:]== ".torrent":
