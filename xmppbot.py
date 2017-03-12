@@ -42,18 +42,23 @@ class XmppBot(sleekxmpp.ClientXMPP):
     MSG_ERROR_OCCURRED = "ERROR!!"
 
     def __init__(self, config_path):
-        sefl.delay = False
+
+        with file(config_path, 'r') as f:
+            self.config = yaml.load(f)
+
+        logging.basicConfig(level=self.config.get(
+            'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
+        self.log = logging.getLogger()
+
+        self.delay = False
         self.commands = []
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if getattr(value, '_command', False):
                 names = getattr(value, '_command_names')
                 self.log.info('Registered command: %s' % " ".join(names))
                 self.commands.append(value)
-                sefl.delay = sefl.delay or getattr(
+                self.delay = self.delay or getattr(
                     value, '_command_delay', False)
-
-        with file(config_path, 'r') as f:
-            self.config = yaml.load(f)
 
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
@@ -61,7 +66,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
         self.register_plugin('xep_0004')  # Data Forms
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0199')  # XMPP Ping
-        if sefl.delay:
+        if self.delay:
             self.register_plugin('xep_0203')  # XMPP Delayed messages
         if self.config.get('vcard', None):
             self.register_plugin('xep_0054')
@@ -74,10 +79,6 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.read_message)
-
-        logging.basicConfig(level=self.config.get(
-            'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
-        self.log = logging.getLogger()
 
         self.custom_roster = self.config.get('roster')
 
@@ -122,14 +123,10 @@ class XmppBot(sleekxmpp.ClientXMPP):
             return m.groups()
         return None
 
-    def get_cmd(self, msg):
-        text = sp.sub(" ", msg['body']).strip()
-        if not text:
-            return None, None
-        user = msg['from'].bare
+    def get_cmd(self, msg, user, text):
         if self.custom_roster and user not in self.custom_roster:
             return None, None
-        delay = sefl.is_delay(msg)
+        delay = self.is_delay(msg)
         cmd = text.split(' ', 1)[0].lower()
         for c in self.commands:
             if delay and not c._command_delay:
@@ -149,8 +146,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
         if msg['type'] in ('chat', 'normal') and msg['body'] and msg['from']:
             user = msg['from'].bare
             text = sp.sub(" ", msg['body']).strip()
-            if user != self.boundjid.bare and len(txt) > 0:
-                cmd, args = self.get_cmd(msg)
+            if user != self.boundjid.bare and len(text) > 0:
+                cmd, args = self.get_cmd(msg, user, text)
                 if not cmd:
                     self.log.debug("Unknown command: %s" % text)
                     return
@@ -176,8 +173,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
             msgreply["html"]["body"] = formated
         msgreply.send()
 
-    def is_delay(sefl, msg):
-        return self.is_delay and bool(msg['delay']._get_attr('stamp'))
+    def is_delay(self, msg):
+        return self.delay and bool(msg['delay']._get_attr('stamp'))
 
     def shell(self, cmd):
         p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
