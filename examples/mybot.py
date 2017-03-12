@@ -11,7 +11,7 @@ import re
 import ipgetter
 from urlparse import urlparse
 
-from xmppbot import botcmd, Bot
+from xmppbot import botcmd, XmppBot
 
 if sys.version_info < (3, 0):
     reload(sys)
@@ -20,7 +20,7 @@ else:
     raw_input = input
 
 
-class MyBot(Bot):
+class MyBot(XmppBot):
 
     def is_torrent(self, url):
         parse = urlparse(url)
