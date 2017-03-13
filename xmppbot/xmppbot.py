@@ -1,5 +1,27 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+"""
+A framework for writing Jabber/XMPP bots.
+The XmppBot framework allows you to easily write bots
+that use the XMPP protocol. You can create commands by
+decorating functions in your subclass or customize the
+bot's operation completely.
+"""
 
 import sys
 import re
@@ -9,16 +31,12 @@ import logging
 import subprocess
 import sleekxmpp
 import inspect
-import yaml
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 
 if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
-else:
-    raw_input = input
-
 
 def botcmd(*args, **kwargs):
     """Decorator for bot command functions"""
@@ -52,13 +70,18 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         self.delay = False
         self.commands = []
+        rg_commands = []
         for name, value in inspect.getmembers(self, inspect.ismethod):
             if getattr(value, '_command', False):
                 names = getattr(value, '_command_names')
                 self.log.info('Registered command: %s' % " ".join(names))
-                self.commands.append(value)
+                if getattr(value, '_command_regex', None) is None:
+                    self.commands.append(value)
+                else:
+                    rg_commands.append(value)
                 self.delay = self.delay or getattr(
                     value, '_command_delay', False)
+        self.commands = self.commands + rg_commands
 
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
@@ -124,8 +147,6 @@ class XmppBot(sleekxmpp.ClientXMPP):
         return None
 
     def get_cmd(self, msg, user, text):
-        if self.custom_roster and user not in self.custom_roster:
-            return None, None
         delay = self.is_delay(msg)
         cmd = text.split(' ', 1)[0].lower()
         for c in self.commands:
@@ -143,44 +164,45 @@ class XmppBot(sleekxmpp.ClientXMPP):
         return None, None
 
     def read_message(self, msg):
-        if msg['type'] in ('chat', 'normal') and msg['body'] and msg['from']:
-            user = msg['from'].bare
-            text = sp.sub(" ", msg['body']).strip()
-            if user != self.boundjid.bare and len(text) > 0:
-                cmd, args = self.get_cmd(msg, user, text)
-                if not cmd:
-                    self.log.debug("Unknown command: %s" % text)
-                    return
+        if msg['type'] not in ('chat', 'normal') or not msg['body'] or not msg['from']:
+            return
+        user = msg['from'].bare
+        if user == self.boundjid.bare or (self.custom_roster and user not in self.custom_roster):
+            return
+        text = sp.sub(" ", msg['body']).strip()
+        if len(text) == 0:
+            return
+        
+        cmd, args = self.get_cmd(msg, user, text)
+        if not cmd:
+            self.log.debug("Unknown command from %s: %s" % (user, text))
+            return
 
-                self.log.debug("*** cmd = %s" % cmd)
-                try:
-                    reply = cmd(user, text, args)
-                except Exception, e:
-                    self.log.exception('An error happened while processing '
-                                       'the message: %s' % text)
-                    reply = self.MSG_ERROR_OCCURRED
-                if reply:
-                    msg.reply(reply).send()
+        self.log.debug("*** Command from %s: %s" % (user, text))
+        try:
+            reply = cmd(user, text, args)
+        except Exception, e:
+            self.log.exception('An error happened while processing '
+                               'the message: %s' % text)
+            reply = self.command_error(user, text, args, e)
+        if reply:
+            self.send_message(msg, reply)
+
+    def command_error(self, user, text, args, e):
+        return self.MSG_ERROR_OCCURRED
 
     def format_message(self, txt):
         return None
 
     def send_message(self, msg, txt):
-        msgreply, formated = msg.reply(txt)
-        if not formated:
-            formated = self.format_message(txt)
+        msgreply = msg.reply(txt)
+        formated = self.format_message(txt)
         if formated:
             msgreply["html"]["body"] = formated
         msgreply.send()
 
     def is_delay(self, msg):
         return self.delay and bool(msg['delay']._get_attr('stamp'))
-
-    def shell(self, cmd):
-        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        return out.strip()
 
     def run(self):
         if self.connect():

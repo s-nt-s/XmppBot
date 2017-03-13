@@ -16,8 +16,6 @@ from xmppbot import botcmd, XmppBot
 if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
-else:
-    raw_input = input
 
 
 class MyBot(XmppBot):
@@ -31,6 +29,12 @@ class MyBot(XmppBot):
         if parse.netloc == "cuelgame.net":
             return True
         return False
+
+    def shell(self, cmd):
+        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        return out.strip()
 
     @botcmd(rg_mode="findall", delay=True, regex=re.compile(r'(?:https?://|magnet:\?xt=urn:btih:)(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'))
     def urls(self, user, txt, urls):
@@ -59,5 +63,5 @@ class MyBot(XmppBot):
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
     os.chdir(path)
-    xmpp = BusBot("config.yml")
+    xmpp = BusBot("mybot.yml")
     xmpp.run()
