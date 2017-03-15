@@ -85,6 +85,11 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
+
+        if self.config.get("auto", False):
+            self.auto_authorize = True
+            self.auto_subscribe = True
+
         self.register_plugin('xep_0030')  # Service Discovery
         self.register_plugin('xep_0004')  # Data Forms
         self.register_plugin('xep_0060')  # PubSub
