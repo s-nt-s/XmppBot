@@ -127,7 +127,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
             except IOError:
                 logging.debug('Could not load avatar')
             if avatar_data:
-                mtype = 'image/' + os.path.splitext(self.config['avatar'])[1]
+                ext = os.path.splitext(self.config['avatar'])[1][1:]
+                mtype = 'image/' + ext
                 avatar_id = self['xep_0084'].generate_id(avatar_data)
                 info = {
                     'id': avatar_id,
@@ -136,8 +137,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
                 }
                 self['xep_0084'].publish_avatar(avatar_data)
                 self['xep_0084'].publish_avatar_metadata(items=[info])
-                self['xep_0153'].set_avatar(
-                    avatar=avatar_data, mtype=mtype)
+                self['xep_0153'].set_avatar(avatar=avatar_data, mtype=mtype)
 
     def get_match(self, regex, mode, text):
         if mode == "findall":
