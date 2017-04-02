@@ -86,6 +86,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
 
+        self.nick = self.config['user'].split("@")[0]
+
         self.auto_reconnect = True
         if self.config.get("auto", False):
             self.auto_authorize = True
@@ -106,6 +108,9 @@ class XmppBot(sleekxmpp.ClientXMPP):
             else:
                 del self.config['avatar']
 
+        if self.config.get('rooms', None):
+            self.register_plugin('xep_0045')  # Multi-User Chat
+
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.read_message)
 
@@ -119,6 +124,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
             vcard['JABBERID'] = self.boundjid.bare
             for f in self.config['vcard']:
                 vcard[f] = self.config['vcard'][f]
+                if f.upper() == 'NICKNAME':
+                    self.nick=self.config['vcard'][f]
             self['xep_0054'].publish_vcard(vcard)
         if self.config.get('avatar', None):
             avatar_data = None
@@ -139,6 +146,15 @@ class XmppBot(sleekxmpp.ClientXMPP):
                 self['xep_0084'].publish_avatar(avatar_data)
                 self['xep_0084'].publish_avatar_metadata(items=[info])
                 self['xep_0153'].set_avatar(avatar=avatar_data, mtype=mtype)
+
+        for room in self.config.get('rooms', []):
+            self.plugin['xep_0045'].joinMUC(room,
+                                            self.nick,
+                                            wait=True)
+            self.joined_room(room)
+
+    def joined_room(self, room):
+        pass
 
     def get_match(self, regex, mode, text):
         if mode == "findall":
@@ -192,7 +208,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
                                'the message: %s' % text)
             reply = self.command_error(user, text, args, e)
         if reply:
-            self.send_message(msg, reply)
+            self.reply_message(msg, reply)
 
     def command_error(self, user, text, args, e):
         return self.MSG_ERROR_OCCURRED
@@ -200,7 +216,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
     def format_message(self, txt):
         return None
 
-    def send_message(self, msg, txt):
+    def reply_message(self, msg, txt):
         msgreply = msg.reply(txt)
         formated = self.format_message(txt)
         if formated:
