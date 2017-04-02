@@ -86,6 +86,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
 
+        self.auto_reconnect = True
         if self.config.get("auto", False):
             self.auto_authorize = True
             self.auto_subscribe = True
