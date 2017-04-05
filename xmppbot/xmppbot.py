@@ -116,6 +116,11 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         self.custom_roster = self.config.get('roster')
 
+        if not self.config.get('lisent'):
+            self.config['lisent']=['chat', 'normal']
+            if self.config.get('rooms', None):
+                self.config['lisent'].append('groupchat')
+
     def start(self, event):
         self.send_presence()
         self.get_roster()
@@ -151,10 +156,12 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.plugin['xep_0045'].joinMUC(room,
                                             self.nick,
                                             wait=True)
-            self.joined_room(room)
+            msg=self.joined_room(room)
+            if msg:
+                self.send_message(mto=room, mbody=msg, mtype='groupchat')
 
     def joined_room(self, room):
-        pass
+        return None
 
     def get_match(self, regex, mode, text):
         if mode == "findall":
@@ -186,11 +193,15 @@ class XmppBot(sleekxmpp.ClientXMPP):
         return None, None
 
     def read_message(self, msg):
-        if msg['type'] not in ('chat', 'normal') or not msg['body'] or not msg['from']:
+        if msg['type'] not in self.config['lisent'] or not msg['body'] or not msg['from']:
             return
+        if msg['type'] == 'groupchat' and msg['from'].resource.lower() == self.nick.lower():
+            return
+
         user = msg['from'].bare
         if user == self.boundjid.bare or (self.custom_roster and user not in self.custom_roster):
             return
+
         text = sp.sub(" ", msg['body']).strip()
         if len(text) == 0:
             return
@@ -201,6 +212,10 @@ class XmppBot(sleekxmpp.ClientXMPP):
             return
 
         self.log.debug("*** Command from %s: %s" % (user, text))
+
+        if msg['type'] == 'groupchat':
+            user = msg['from'].resource
+        
         try:
             reply = cmd(user, text, args)
         except Exception, e:
