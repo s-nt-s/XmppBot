@@ -38,22 +38,28 @@ if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
 
+creator_order=0
+
 def botcmd(*args, **kwargs):
     """Decorator for bot command functions"""
+    global creator_order
 
-    def decorate(func, name=None, names=None, delay=False, fromuser=None, regex=None, rg_mode="match"):
+    def decorate(func, creator_order, name=None, names=None, delay=False, fromuser=None, regex=None, rg_mode="match"):
         setattr(func, '_command', True)
         setattr(func, '_command_names', names or [name or func.__name__])
         setattr(func, '_command_delay', delay)
         setattr(func, '_command_fromuser', fromuser)
         setattr(func, '_command_regex', regex)
         setattr(func, '_command_rg_mode', rg_mode)
+        setattr(func, '_command_order', creator_order)
         return func
 
+    creator_order += 1
+
     if len(args):
-        return decorate(args[0], **kwargs)
+        return decorate(args[0], creator_order, **kwargs)
     else:
-        return lambda func: decorate(func, **kwargs)
+        return lambda func: decorate(func, creator_order, **kwargs)
 
 
 class XmppBot(sleekxmpp.ClientXMPP):
@@ -71,17 +77,17 @@ class XmppBot(sleekxmpp.ClientXMPP):
         self.delay = False
         self.commands = []
         rg_commands = []
-        for name, value in inspect.getmembers(self, inspect.ismethod):
-            if getattr(value, '_command', False):
-                names = getattr(value, '_command_names')
-                self.log.info('Registered command: %s' % " ".join(names))
-                if getattr(value, '_command_regex', None) is None:
-                    self.commands.append(value)
-                else:
-                    rg_commands.append(value)
-                self.delay = self.delay or getattr(
-                    value, '_command_delay', False)
-        self.commands = self.commands + rg_commands
+
+        commands = inspect.getmembers(self, inspect.ismethod)
+        commands = filter(lambda x: getattr(x[1], '_command', False), commands)
+        commands = sorted(commands, key=lambda x: getattr(x[1], '_command_order'))
+        
+        for name, value in commands:
+            names = getattr(value, '_command_names')
+            order = getattr(value, '_command_order', 0)
+            self.log.info('Registered %dº command: %s' % (order, " ".join(names)))
+            self.commands.append(value)
+            self.delay = self.delay or getattr(value, '_command_delay', False)
 
         sleekxmpp.ClientXMPP.__init__(
             self, self.config['user'], self.config['pass'])
