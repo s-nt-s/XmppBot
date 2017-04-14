@@ -99,12 +99,14 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.auto_authorize = True
             self.auto_subscribe = True
 
-        self.register_plugin('xep_0030')  # Service Discovery
-        self.register_plugin('xep_0004')  # Data Forms
-        self.register_plugin('xep_0060')  # PubSub
-        self.register_plugin('xep_0199')  # XMPP Ping
+        self.register_plugin('xep_0030') # Service Discovery
+        self.register_plugin('xep_0004') # Data Forms
+        self.register_plugin('xep_0060') # PubSub
+        self.register_plugin('xep_0199') # XMPP Ping
+        if self.format_message(""):
+            self.register_plugin('xep_0071') # XHTML-IM
         if self.delay:
-            self.register_plugin('xep_0203')  # XMPP Delayed messages
+            self.register_plugin('xep_0203') # XMPP Delayed messages
         if self.config.get('vcard', None):
             self.register_plugin('xep_0054')
         if self.config.get('avatar', None):
@@ -239,9 +241,10 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
     def reply_message(self, msg, txt):
         msgreply = msg.reply(txt)
-        formated = self.format_message(txt)
-        if formated:
-            msgreply["html"]["body"] = formated
+        if msgreply["html"]:
+            formated = self.format_message(txt)
+            if formated:
+                msgreply["html"]["body"] = formated
         msgreply.send()
 
     def is_delay(self, msg):
