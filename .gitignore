@@ -2,3 +2,5 @@
 *.yaml
 *.out
 *.png
+*.txt
+build
