@@ -20,12 +20,19 @@ max_long=str(100)
 
 def get_image(wiki_id):
     url="https://es.wikipedia.org/w/api.php?format=json&action=query&formatversion=2&pithumbsize=240&prop=pageimages&redirects&pageids="+wiki_id
-    r = requests.get(url)
+    r = requests.get(url, verify=False)
     j = r.json()
     j = j["query"]["pages"][0]
     if "thumbnail" in j:
         return j["thumbnail"]["source"]
     return None
+
+def get_options(b,ops):
+    b = b.lower()
+    ops = [i for i in set(ops) if i.lower() != b]
+    if len(ops) == 0:
+        return None
+    return sorted(ops)
 
 class WikiBot(XmppBot):
 
@@ -44,10 +51,13 @@ class WikiBot(XmppBot):
             msg = msg+"\nFuente: "+r.url
             return msg
         except wikipedia.exceptions.DisambiguationError as e:
-            return "Concrete la búsqueda:\n- " + "\n- ".join(e.options)
+            ops = get_options(busqueda, e.options)
         except wikipedia.exceptions.PageError as e:
-            return "Su búsqueda no da resultados"
-        return None
+            pass
+        msg = "Tu búsqueda no obtiene resultados."
+        if ops:
+            msg = msg + "\nQuizá quiso decir:\n- " + "\n- ".join(ops)
+        return msg
         
     @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
     def todo_lo_demas(self, user, busqueda, args):
