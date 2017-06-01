@@ -38,6 +38,7 @@ class WikiBot(XmppBot):
 
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
     def wikipedia(self, user, busqueda, args):
+        ops = None
         try:
             r = wikipedia.page(busqueda,auto_suggest=True, redirect=True)
             msg=r.title+"\n"
