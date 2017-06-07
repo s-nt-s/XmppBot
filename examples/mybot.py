@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import re
-import yaml
-import os
 import logging
-import subprocess
+import os
 import re
-import ipgetter
+import subprocess
+import sys
 from urlparse import urlparse
 
-from xmppbot import botcmd, XmppBot
+import yaml
+from xmppbot import XmppBot, botcmd
+
+import ipgetter
 
 if sys.version_info < (3, 0):
     reload(sys)

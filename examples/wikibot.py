@@ -1,32 +1,55 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-import re
 import logging
-import requests
-import wikipedia
+import os
+import re
+import sys
 
-from xmppbot import botcmd, XmppBot
+import requests
+from xmppbot import XmppBot, botcmd
 
 if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
 
-
 min_long=str(3)
 max_long=str(100)
 
-def get_image(wiki_id):
-    url="https://es.wikipedia.org/w/api.php?format=json&action=query&formatversion=2&pithumbsize=240&prop=pageimages&redirects&pageids="+wiki_id
-    r = requests.get(url, verify=False)
-    j = r.json()
-    j = j["query"]["pages"][0]
-    if "thumbnail" in j:
-        return j["thumbnail"]["source"]
-    return None
+API_URL = "https://es.wikipedia.org/w/api.php"
+API_ARG = {
+	'format': 'json',
+	'action': 'query',
+	'pithumbsize': 240,
+	'redirects': '',
+	'explaintext': '',
+	'exintro': '',
+	'inprop': 'url',
+	'prop': 'info|pageimages|extracts',
+	'titles': ''
+}
 
+
+requests.packages.urllib3.disable_warnings()
+
+
+class WikiPedia:
+    def __init__(self, busqueda):
+        API_ARG["titles"]=busqueda
+        r = requests.get(API_URL, params=API_ARG, verify=False)
+        j = r.json()
+        j = j["query"]
+        j = j["pages"]
+        k = j.keys()
+        self.ko = '-1' in k
+        if not self.ko:
+            j = next(iter(j.values()))
+            self.pageid = j["pageid"]
+            self.title = j["title"]
+            self.image = j["thumbnail"]["source"] if "thumbnail" in j else None
+            self.summary = j["extract"]
+            self.url = j["canonicalurl"]
+        
 def get_options(b,ops):
     b = b.lower()
     ops = [i for i in set(ops) if i.lower() != b]
@@ -38,26 +61,16 @@ class WikiBot(XmppBot):
 
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
     def wikipedia(self, user, busqueda, args):
-        ops = None
-        try:
-            r = wikipedia.page(busqueda,auto_suggest=True, redirect=True)
-            msg=r.title+"\n"
-            img = get_image(r.pageid)
-            '''
-            img = r.images[0] if r.images and len(r.images)>0 else None
-            '''
-            if img:
-                msg = msg+img+"\n" #"<img src=\""+img+"\"/>\n"
-            msg = msg+r.summary
-            msg = msg+"\nFuente: "+r.url
-            return msg
-        except wikipedia.exceptions.DisambiguationError as e:
-            ops = get_options(busqueda, e.options)
-        except wikipedia.exceptions.PageError as e:
-            pass
-        msg = "Tu búsqueda no obtiene resultados."
-        if ops:
-            msg = msg + "\nQuizá quiso decir:\n- " + "\n- ".join(ops)
+        w = WikiPedia(busqueda)
+        if w.ko:
+            return "Tu búsqueda no obtiene resultados."
+        msg=""
+        if w.title.lower() != busqueda.lower():
+            msg = msg+w.title+"\n"
+        if w.image:
+            msg = msg+w.image+"\n"
+        msg = msg+w.summary
+        msg = msg+"\nFuente: "+w.url
         return msg
         
     @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
@@ -65,7 +78,6 @@ class WikiBot(XmppBot):
         return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
 
 if __name__ == '__main__':
-    wikipedia.set_lang("es")
     path = os.path.dirname(os.path.realpath(__file__))
     os.chdir(path)
     xmpp = WikiBot("wiki.yaml")

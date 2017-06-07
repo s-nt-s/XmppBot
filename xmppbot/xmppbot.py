@@ -23,14 +23,15 @@ decorating functions in your subclass or customize the
 bot's operation completely.
 """
 
-import sys
-import re
-import yaml
-import os
-import logging
-import subprocess
-import sleekxmpp
 import inspect
+import logging
+import os
+import re
+import subprocess
+import sys
+
+import sleekxmpp
+import yaml
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 
