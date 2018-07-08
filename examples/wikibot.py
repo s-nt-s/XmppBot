@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import logging
@@ -60,7 +60,7 @@ def get_options(b,ops):
 class WikiBot(XmppBot):
 
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
-    def wikipedia(self, user, busqueda, args):
+    def wikipedia(self, busqueda, **kwargs):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
@@ -72,9 +72,9 @@ class WikiBot(XmppBot):
         msg = msg+w.summary
         msg = msg+"\nFuente: "+w.url
         return msg
-        
+
     @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
-    def todo_lo_demas(self, user, busqueda, args):
+    def todo_lo_demas(self, busqueda, **kwargs):
         return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
 
 if __name__ == '__main__':

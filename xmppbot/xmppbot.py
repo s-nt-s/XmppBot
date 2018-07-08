@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
 # This program is free software; you can redistribute it and/or modify
@@ -68,7 +67,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
     def __init__(self, config_path):
 
-        with file(config_path, 'r') as f:
+        with open(config_path, 'r') as f:
             self.config = yaml.load(f)
 
         logging.basicConfig(level=self.config.get(
@@ -226,21 +225,21 @@ class XmppBot(sleekxmpp.ClientXMPP):
             user = msg['from'].resource
         
         try:
-            reply = cmd(user, text, args)
-        except Exception, e:
+            reply = cmd(*args, user=user, text=text, msg=msg)
+        except Exception as error:
             self.log.exception('An error happened while processing '
                                'the message: %s' % text)
-            reply = self.command_error(user, text, args, e)
+            reply = self.command_error(error, *args, user=user, text=text, msg=msg)
         if reply:
-            self.reply_message(msg, reply)
+            self.reply_message(msg, reply, *args, **msg)
 
-    def command_error(self, user, text, args, e):
+    def command_error(self, *args, **kwargs):
         return self.MSG_ERROR_OCCURRED
 
-    def format_message(self, txt):
+    def format_message(self, txt, *args, **kwargs):
         return None
 
-    def reply_message(self, msg, txt):
+    def reply_message(self, msg, txt, *args, **kwargs):
         msgreply = msg.reply(txt)
         if msgreply["html"]:
             formated = self.format_message(txt)
