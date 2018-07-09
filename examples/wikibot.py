@@ -59,8 +59,14 @@ def get_options(b,ops):
 
 class WikiBot(XmppBot):
 
+    def start(self, event):
+        super().start(event)
+        self.register_plugin('xep_0066') # OOB
+        self.register_plugin('xep_0231') # BOB
+        #self.register_plugin('xep_0071') # XHTML-IM
+
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
-    def wikipedia(self, busqueda, **kwargs):
+    def wikipedia(self, busqueda, user, **kwargs):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
@@ -68,7 +74,13 @@ class WikiBot(XmppBot):
         if w.title.lower() != busqueda.lower():
             msg = msg+w.title+"\n"
         if w.image:
-            msg = msg+w.image+"\n"
+            m = self.Message()
+            m['to'] = user
+            m['type'] = 'chat'
+            m['oob']['url'] = w.image
+            m['body'] = w.image
+            m.send()
+            #msg = msg+w.image+"\n"
         msg = msg+w.summary
         msg = msg+"\nFuente: "+w.url
         return msg
