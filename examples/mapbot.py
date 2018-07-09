@@ -10,7 +10,7 @@ from geopy.geocoders import Nominatim
 import requests
 from xmppbot import XmppBot, botcmd
 
-map_url = "http://tyler-demo.herokuapp.com/?lat={lat}&lon={lon}&zoom={zoom}"
+map_url = "http://tyler-demo.herokuapp.com/?lat={lat}&lon={lon}&width=3000&height=1688&zoom=19"
 
 class MapBot(XmppBot):
 
@@ -19,7 +19,7 @@ class MapBot(XmppBot):
         location = Nominatim().geocode(calle)
         if not location:
             return "No encontrado"
-        url = map_url.format(lat=location.latitude, lon=location.longitude, zoom=18)
+        url = map_url.format(lat=location.latitude, lon=location.longitude)
         #return url
         return location.address+"\n" + url
         
