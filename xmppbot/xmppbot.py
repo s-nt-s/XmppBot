@@ -179,6 +179,9 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         return None
 
+    def joined_room(self):
+        pass
+
     def get_match(self, regex, mode, text):
         if mode == "findall":
             return regex.findall(text)
