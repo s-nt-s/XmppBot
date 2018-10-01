@@ -179,7 +179,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         return None
 
-    def joined_room(self):
+    def joined_room(self, room):
         pass
 
     def get_match(self, regex, mode, text):
