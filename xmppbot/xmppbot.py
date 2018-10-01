@@ -33,6 +33,7 @@ import sleekxmpp
 import yaml
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
+url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
 
 if sys.version_info < (3, 0):
     reload(sys)
@@ -74,9 +75,11 @@ class XmppBot(sleekxmpp.ClientXMPP):
             'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
         self.log = logging.getLogger()
 
+        self.use_ipv6 = self.config.get("use_ipv6", True)
         self.delay = False
         self.commands = []
         rg_commands = []
+        plugins = set(self.config.get("plugins","").split())
 
         commands = inspect.getmembers(self, inspect.ismethod)
         commands = filter(lambda x: getattr(x[1], '_command', False), commands)
@@ -99,25 +102,31 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.auto_authorize = True
             self.auto_subscribe = True
 
-        self.register_plugin('xep_0030') # Service Discovery
-        self.register_plugin('xep_0004') # Data Forms
-        self.register_plugin('xep_0060') # PubSub
-        self.register_plugin('xep_0199') # XMPP Ping
+        plugins.add('xep_0030') # Service Discovery
+        plugins.add('xep_0004') # Data Forms
+        plugins.add('xep_0060') # PubSub
+        plugins.add('xep_0199') # XMPP Ping
         if self.format_message(""):
-            self.register_plugin('xep_0071') # XHTML-IM
+            plugins.add('xep_0071') # XHTML-IM
         if self.delay:
-            self.register_plugin('xep_0203') # XMPP Delayed messages
+            plugins.add('xep_0203') # XMPP Delayed messages
         if self.config.get('vcard', None):
-            self.register_plugin('xep_0054')
+            plugins.add('xep_0054')
         if self.config.get('avatar', None):
             if os.path.isfile(self.config['avatar']):
-                self.register_plugin('xep_0084')
-                self.register_plugin('xep_0153')
+                plugins.add('xep_0084')
+                plugins.add('xep_0153')
             else:
                 del self.config['avatar']
 
         if self.config.get('rooms', None):
-            self.register_plugin('xep_0045')  # Multi-User Chat
+            plugins.add('xep_0045')  # Multi-User Chat
+
+        if self.config.get('img_to_oob', False):
+            plugins.add('xep_0066') # OOB
+
+        for plugin in plugins:
+            self.register_plugin(plugin)
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.read_message)
@@ -168,7 +177,6 @@ class XmppBot(sleekxmpp.ClientXMPP):
             if msg:
                 self.send_message(mto=room, mbody=msg, mtype='groupchat')
 
-    def joined_room(self, room):
         return None
 
     def get_match(self, regex, mode, text):
@@ -241,11 +249,19 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
     def reply_message(self, msg, txt, *args, **kwargs):
         msgreply = msg.reply(txt)
+        _to = msgreply['to']
         if msgreply["html"]:
             formated = self.format_message(txt)
             if formated:
                 msgreply["html"]["body"] = formated
         msgreply.send()
+        if self.config.get('img_to_oob', False):
+            imgs = set([i[0] for i in url_img.findall(txt)])
+            for i in imgs:
+                imgreply = msg.reply()
+                imgreply['to'] = _to
+                imgreply['oob']['url'] = i
+                imgreply.send()
 
     def is_delay(self, msg):
         return self.delay and bool(msg['delay']._get_attr('stamp'))
@@ -255,4 +271,5 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.log.info("Bot started.")
             self.process(block=True)
         else:
-            self.log.info("Unable to connect.")
+            self.log.info("Unable to connect.") 
+

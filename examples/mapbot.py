@@ -13,21 +13,10 @@ from xmppbot import XmppBot, botcmd
 #map_url = "http://tyler-demo.herokuapp.com/?lat={lat}&lon={lon}&width=3000&height=1688&zoom=19"
 map_prm_1 = "&width=3000&height=3000&zoom=19"
 map_url_1 = "http://tyler-demo.herokuapp.com/?lat={lat}&lon={lon}" + map_prm_1
-map_prm_2 = "size=1024x1024&maptype=mapnik&zoom=18"
-map_url_2 = "http://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}" + map_prm_2
+map_prm_2 = "&size=1024x1024&maptype=mapnik&zoom=18"
+map_url_2 = "http://staticmap.openstreetmap.de/staticmap.php?center={lat},{lon}&markers={lat},{lon},lightblue1" + map_prm_2
 
 class MapBot(XmppBot):
-
-    '''
-    def __init__(self, *args, **kwargs):
-        XmppBot.__init__(self, *args, **kwargs)
-        self.use_ipv6 = False
-    '''
-
-    def start(self, event):
-        super().start(event)
-        self.register_plugin('xep_0066') # OOB
-        self.register_plugin('xep_0231') # BOB
 
     def send_oob(self, user, url):
         m = self.Message()
@@ -45,7 +34,7 @@ class MapBot(XmppBot):
         url_2 = map_url_2.format(lat=location.latitude, lon=location.longitude)
         
         self.send_oob(user, url_1.replace(map_prm_1, "")+"&greyscale=true")
-        self.send_oob(user, url_2)
+        self.send_oob(user, url_2)#.replace(map_prm_2, ""))
 
         return location.address+"\n" + url_1 + "\n" + url_2
         
