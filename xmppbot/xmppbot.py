@@ -130,6 +130,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.read_message)
+        self.add_event_handler("groupchat_subject", self.groupchat_subject)
 
         self.custom_roster = self.config.get('roster')
 
@@ -180,6 +181,9 @@ class XmppBot(sleekxmpp.ClientXMPP):
         return None
 
     def joined_room(self, room):
+        pass
+
+    def groupchat_subject(self, data):
         pass
 
     def get_match(self, regex, mode, text):
