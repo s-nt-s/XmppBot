@@ -1,1 +1,1 @@
-from .xmppbot import XmppBot, botcmd
+from .xmppbot import XmppBot, botcmd, XmppMsg

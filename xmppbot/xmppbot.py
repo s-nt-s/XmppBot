@@ -28,6 +28,7 @@ import os
 import re
 import subprocess
 import sys
+from os.path import expanduser
 
 import sleekxmpp
 import yaml
@@ -62,14 +63,29 @@ def botcmd(*args, **kwargs):
     else:
         return lambda func: decorate(func, creator_order, **kwargs)
 
+def get_config(path):
+    if path is None:
+        raise Exception("Config file is mandatory")
+    if isinstance(path, dict):
+        config = path
+    elif isinstance(path, str):
+        path = expanduser(path)
+        if not os.path.isfile(path):
+            raise Exception(path+" doesn't exist")
+        with open(path, 'r') as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+    else:
+        raise Exception("Config must be str or dict")
+    if "user" not in config or "pass" not in config:
+        raise Exception("Missing key values")
+    return config
 
 class XmppBot(sleekxmpp.ClientXMPP):
     MSG_ERROR_OCCURRED = "ERROR!!"
 
     def __init__(self, config_path):
 
-        with open(config_path, 'r') as f:
-            self.config = yaml.load(f)
+        self.config = get_config(config_path)
 
         logging.basicConfig(level=self.config.get(
             'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
@@ -84,7 +100,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
         commands = inspect.getmembers(self, inspect.ismethod)
         commands = filter(lambda x: getattr(x[1], '_command', False), commands)
         commands = sorted(commands, key=lambda x: getattr(x[1], '_command_order'))
-        
+
         for name, value in commands:
             names = getattr(value, '_command_names')
             order = getattr(value, '_command_order', 0)
@@ -228,7 +244,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
         text = sp.sub(" ", msg['body']).strip()
         if len(text) == 0:
             return
-        
+
         cmd, args = self.get_cmd(msg, user, text)
         if not cmd:
             self.log.debug("Unknown command from %s: %s" % (user, text))
@@ -238,7 +254,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
         if msg['type'] == 'groupchat':
             user = msg['from'].resource
-        
+
         try:
             reply = cmd(*args, user=user, text=text, msg=msg)
         except Exception as error:
@@ -278,5 +294,82 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.log.info("Bot started.")
             self.process(block=True)
         else:
-            self.log.info("Unable to connect.") 
+            self.log.info("Unable to connect.")
 
+class SendMsgBot(sleekxmpp.ClientXMPP):
+    def __init__(self, config):
+        self.config = get_config(config)
+        sleekxmpp.ClientXMPP.__init__(self, self.config["user"], self.config["pass"])
+        self.messages = []
+        self.add_event_handler("session_start", self.start)
+
+    def start(self, event):
+        self.send_presence()
+        self.get_roster()
+        while self.messages:
+            to, msg = self.messages.pop(0)
+            self.send_message(mto=to,
+                              mbody=msg,
+                              mtype='chat')
+        self.disconnect(wait=True)
+
+    def run(self):
+        if self.connect():
+            self.process(block=True)
+
+class XmppMsg:
+    def __init__(self, config=expanduser("~/.xmpp.yml"), to=None):
+        self._config = None
+        self._to = None
+        self.config = config
+        self.to = to
+
+    @property
+    def config(self):
+        return self._config
+
+    @config.setter
+    def config(self, config):
+        self._config = get_config(config)
+        self.bot=SendMsgBot(self._config)
+        self.to = self._config.get("to", self.to)
+
+    @property
+    def to(self):
+        return self._to
+
+    @to.setter
+    def to(self, to):
+        if to is None:
+            self._to = None
+        elif isinstance(to, str):
+            self._to=to.strip().split()
+        elif isinstance(to, (set, list, tuple)):
+            self._to=to
+        else:
+            raise Exception("to must be a str, set, list or tuple")
+
+    @property
+    def msg(self):
+        return self.bot.messages
+
+    @msg.setter
+    def msg(self, value):
+        if value is None:
+            self.bot.messages = []
+        elif isinstance(value, str):
+            for to in self.to:
+                self.bot.messages.append((to, value))
+        elif isinstance(value, tuple):
+            msg = value[-1]
+            for tos in value[:-1]:
+                for to in tos.strip().split():
+                    self.bot.messages.append((to, msg))
+
+    def send(self):
+        self.bot.run()
+
+    def reload(self, config=None):
+        if config:
+            self.config = config
+        self.bot=SendMsgBot(self.config)
