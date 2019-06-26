@@ -74,12 +74,12 @@ class XmppMsg:
             self.bot.messages = []
             return
         if isinstance(value, (Tag, BeautifulSoup, str)):
-            value = aux_to_xep0393(value)
+            value = msg_to_xep0393(value)
         if isinstance(value, str):
             for to in self.to:
                 self.bot.messages.append((to, value))
         elif isinstance(value, tuple):
-            msg = aux_to_xep0393(value[-1])
+            msg = msg_to_xep0393(value[-1])
             for tos in value[:-1]:
                 for to in tos.strip().split():
                     self.bot.messages.append((to, msg))
@@ -93,7 +93,7 @@ class XmppMsg:
         self.bot = SendMsgBot(self.config)
 
 
-def aux_to_xep0393(msg):
+def msg_to_xep0393(msg):
     if isinstance(msg, (Tag, BeautifulSoup)):
         return to_xep0393(msg)
     if isinstance(msg, str):
