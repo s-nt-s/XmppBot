@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
 import os
 import re
 import subprocess
@@ -9,9 +8,9 @@ import sys
 from urlparse import urlparse
 
 import yaml
-from xmppbot import XmppBot, botcmd
 
 import ipgetter
+from xmppbot import XmppBot, botcmd
 
 if sys.version_info < (3, 0):
     reload(sys)
@@ -59,6 +58,7 @@ class MyBot(XmppBot):
     @botcmd(regex=re.compile(r'^(start|stop|status)\s+(tor|sshd|shellinabox|sslh)$'), rg_mode="match")
     def service(self, user, ser, args):
         return self.shell("service " + args[1] + " " + args[0])
+
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))

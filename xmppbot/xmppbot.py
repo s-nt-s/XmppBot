@@ -26,12 +26,11 @@ import inspect
 import logging
 import os
 import re
-import subprocess
 import sys
-from os.path import expanduser
 
 import sleekxmpp
-import yaml
+
+from .common import get_config
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
@@ -40,7 +39,8 @@ if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
 
-creator_order=0
+creator_order = 0
+
 
 def botcmd(*args, **kwargs):
     """Decorator for bot command functions"""
@@ -63,22 +63,6 @@ def botcmd(*args, **kwargs):
     else:
         return lambda func: decorate(func, creator_order, **kwargs)
 
-def get_config(path):
-    if path is None:
-        raise Exception("Config file is mandatory")
-    if isinstance(path, dict):
-        config = path
-    elif isinstance(path, str):
-        path = expanduser(path)
-        if not os.path.isfile(path):
-            raise Exception(path+" doesn't exist")
-        with open(path, 'r') as f:
-            config = yaml.load(f, Loader=yaml.FullLoader)
-    else:
-        raise Exception("Config must be str or dict")
-    if "user" not in config or "pass" not in config:
-        raise Exception("Missing key values")
-    return config
 
 class XmppBot(sleekxmpp.ClientXMPP):
     MSG_ERROR_OCCURRED = "ERROR!!"
@@ -95,16 +79,18 @@ class XmppBot(sleekxmpp.ClientXMPP):
         self.delay = False
         self.commands = []
         rg_commands = []
-        plugins = set(self.config.get("plugins","").split())
+        plugins = set(self.config.get("plugins", "").split())
 
         commands = inspect.getmembers(self, inspect.ismethod)
         commands = filter(lambda x: getattr(x[1], '_command', False), commands)
-        commands = sorted(commands, key=lambda x: getattr(x[1], '_command_order'))
+        commands = sorted(
+            commands, key=lambda x: getattr(x[1], '_command_order'))
 
         for name, value in commands:
             names = getattr(value, '_command_names')
             order = getattr(value, '_command_order', 0)
-            self.log.info('Registered %dº command: %s' % (order, " ".join(names)))
+            self.log.info('Registered %dº command: %s' %
+                          (order, " ".join(names)))
             self.commands.append(value)
             self.delay = self.delay or getattr(value, '_command_delay', False)
 
@@ -118,14 +104,14 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.auto_authorize = True
             self.auto_subscribe = True
 
-        plugins.add('xep_0030') # Service Discovery
-        plugins.add('xep_0004') # Data Forms
-        plugins.add('xep_0060') # PubSub
-        plugins.add('xep_0199') # XMPP Ping
+        plugins.add('xep_0030')  # Service Discovery
+        plugins.add('xep_0004')  # Data Forms
+        plugins.add('xep_0060')  # PubSub
+        plugins.add('xep_0199')  # XMPP Ping
         if self.format_message(""):
-            plugins.add('xep_0071') # XHTML-IM
+            plugins.add('xep_0071')  # XHTML-IM
         if self.delay:
-            plugins.add('xep_0203') # XMPP Delayed messages
+            plugins.add('xep_0203')  # XMPP Delayed messages
         if self.config.get('vcard', None):
             plugins.add('xep_0054')
         if self.config.get('avatar', None):
@@ -139,7 +125,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
             plugins.add('xep_0045')  # Multi-User Chat
 
         if self.config.get('img_to_oob', False):
-            plugins.add('xep_0066') # OOB
+            plugins.add('xep_0066')  # OOB
 
         for plugin in plugins:
             self.register_plugin(plugin)
@@ -151,7 +137,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
         self.custom_roster = self.config.get('roster')
 
         if not self.config.get('lisent'):
-            self.config['lisent']=['chat', 'normal']
+            self.config['lisent'] = ['chat', 'normal']
             if self.config.get('rooms', None):
                 self.config['lisent'].append('groupchat')
 
@@ -164,7 +150,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
             for f in self.config['vcard']:
                 vcard[f] = self.config['vcard'][f]
                 if f.upper() == 'NICKNAME':
-                    self.nick=self.config['vcard'][f]
+                    self.nick = self.config['vcard'][f]
             self['xep_0054'].publish_vcard(vcard)
         if self.config.get('avatar', None):
             avatar_data = None
@@ -190,7 +176,7 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.plugin['xep_0045'].joinMUC(room,
                                             self.nick,
                                             wait=True)
-            msg=self.joined_room(room)
+            msg = self.joined_room(room)
             if msg:
                 self.send_message(mto=room, mbody=msg, mtype='groupchat')
 
@@ -260,7 +246,8 @@ class XmppBot(sleekxmpp.ClientXMPP):
         except Exception as error:
             self.log.exception('An error happened while processing '
                                'the message: %s' % text)
-            reply = self.command_error(error, *args, user=user, text=text, msg=msg)
+            reply = self.command_error(
+                error, *args, user=user, text=text, msg=msg)
         if reply:
             self.reply_message(msg, reply, *args, **msg)
 
@@ -295,81 +282,3 @@ class XmppBot(sleekxmpp.ClientXMPP):
             self.process(block=True)
         else:
             self.log.info("Unable to connect.")
-
-class SendMsgBot(sleekxmpp.ClientXMPP):
-    def __init__(self, config):
-        self.config = get_config(config)
-        sleekxmpp.ClientXMPP.__init__(self, self.config["user"], self.config["pass"])
-        self.messages = []
-        self.add_event_handler("session_start", self.start)
-
-    def start(self, event):
-        self.send_presence()
-        self.get_roster()
-        while self.messages:
-            to, msg = self.messages.pop(0)
-            self.send_message(mto=to,
-                              mbody=msg,
-                              mtype='chat')
-        self.disconnect(wait=True)
-
-    def run(self):
-        if self.connect():
-            self.process(block=True)
-
-class XmppMsg:
-    def __init__(self, config=expanduser("~/.xmpp.yml"), to=None):
-        self._config = None
-        self._to = None
-        self.config = config
-        self.to = to
-
-    @property
-    def config(self):
-        return self._config
-
-    @config.setter
-    def config(self, config):
-        self._config = get_config(config)
-        self.bot=SendMsgBot(self._config)
-        self.to = self._config.get("to", self.to)
-
-    @property
-    def to(self):
-        return self._to
-
-    @to.setter
-    def to(self, to):
-        if to is None:
-            self._to = None
-        elif isinstance(to, str):
-            self._to=to.strip().split()
-        elif isinstance(to, (set, list, tuple)):
-            self._to=to
-        else:
-            raise Exception("to must be a str, set, list or tuple")
-
-    @property
-    def msg(self):
-        return self.bot.messages
-
-    @msg.setter
-    def msg(self, value):
-        if value is None:
-            self.bot.messages = []
-        elif isinstance(value, str):
-            for to in self.to:
-                self.bot.messages.append((to, value))
-        elif isinstance(value, tuple):
-            msg = value[-1]
-            for tos in value[:-1]:
-                for to in tos.strip().split():
-                    self.bot.messages.append((to, msg))
-
-    def send(self):
-        self.bot.run()
-
-    def reload(self, config=None):
-        if config:
-            self.config = config
-        self.bot=SendMsgBot(self.config)

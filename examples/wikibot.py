@@ -1,32 +1,32 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
 import os
 import re
 import sys
 
 import requests
+
 from xmppbot import XmppBot, botcmd
 
 if sys.version_info < (3, 0):
     reload(sys)
     sys.setdefaultencoding('utf8')
 
-min_long=str(3)
-max_long=str(100)
+min_long = str(3)
+max_long = str(100)
 
 API_URL = "https://es.wikipedia.org/w/api.php"
 API_ARG = {
-	'format': 'json',
-	'action': 'query',
-	'pithumbsize': 240,
-	'redirects': '',
-	'explaintext': '',
-	'exintro': '',
-	'inprop': 'url',
-	'prop': 'info|pageimages|extracts',
-	'titles': ''
+    'format': 'json',
+    'action': 'query',
+    'pithumbsize': 240,
+    'redirects': '',
+    'explaintext': '',
+    'exintro': '',
+    'inprop': 'url',
+    'prop': 'info|pageimages|extracts',
+    'titles': ''
 }
 
 
@@ -35,7 +35,7 @@ requests.packages.urllib3.disable_warnings()
 
 class WikiPedia:
     def __init__(self, busqueda):
-        API_ARG["titles"]=busqueda
+        API_ARG["titles"] = busqueda
         r = requests.get(API_URL, params=API_ARG, verify=False)
         j = r.json()
         j = j["query"]
@@ -49,28 +49,30 @@ class WikiPedia:
             self.image = j["thumbnail"]["source"] if "thumbnail" in j else None
             self.summary = j["extract"]
             self.url = j["canonicalurl"]
-        
-def get_options(b,ops):
+
+
+def get_options(b, ops):
     b = b.lower()
     ops = [i for i in set(ops) if i.lower() != b]
     if len(ops) == 0:
         return None
     return sorted(ops)
 
+
 class WikiBot(XmppBot):
 
     def start(self, event):
         super().start(event)
-        self.register_plugin('xep_0066') # OOB
-        self.register_plugin('xep_0231') # BOB
-        #self.register_plugin('xep_0071') # XHTML-IM
+        self.register_plugin('xep_0066')  # OOB
+        self.register_plugin('xep_0231')  # BOB
+        # self.register_plugin('xep_0071') # XHTML-IM
 
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
     def wikipedia(self, busqueda, user, **kwargs):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
-        msg=""
+        msg = ""
         if w.title.lower() != busqueda.lower():
             msg = msg+w.title+"\n"
         if w.image:
@@ -88,6 +90,7 @@ class WikiBot(XmppBot):
     @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
     def todo_lo_demas(self, busqueda, **kwargs):
         return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
+
 
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
