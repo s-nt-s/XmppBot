@@ -97,8 +97,8 @@ def msg_to_xep0393(msg):
     if isinstance(msg, (Tag, BeautifulSoup)):
         return to_xep0393(msg)
     if isinstance(msg, str):
-        _msg = msg.strip()
+        _msg = msg.strip().lower()
         for tag in ("html", "p", "div", "body", "table"):
             if _msg.startswith("<"+tag+">") and _msg.endswith("</"+tag+">"):
-                return to_xep0393(_msg)
+                return to_xep0393(msg)
     return msg
