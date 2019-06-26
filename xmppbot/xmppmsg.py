@@ -1,3 +1,4 @@
+import time
 from os.path import expanduser
 
 import sleekxmpp
@@ -22,10 +23,11 @@ class SendMsgBot(sleekxmpp.ClientXMPP):
             self.send_message(mto=to,
                               mbody=msg,
                               mtype='chat')
+            time.sleep(0.1)
         self.disconnect(wait=True)
 
     def run(self):
-        if self.connect():
+        if self.messages and self.connect():
             self.process(block=True)
 
 
