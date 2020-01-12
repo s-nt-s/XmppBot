@@ -108,8 +108,6 @@ class XmppBot(sleekxmpp.ClientXMPP):
         plugins.add('xep_0004')  # Data Forms
         plugins.add('xep_0060')  # PubSub
         plugins.add('xep_0199')  # XMPP Ping
-        if self.format_message(""):
-            plugins.add('xep_0071')  # XHTML-IM
         if self.delay:
             plugins.add('xep_0203')  # XMPP Delayed messages
         if self.config.get('vcard', None):
@@ -254,16 +252,12 @@ class XmppBot(sleekxmpp.ClientXMPP):
     def command_error(self, *args, **kwargs):
         return self.MSG_ERROR_OCCURRED
 
-    def format_message(self, txt, *args, **kwargs):
-        return None
+    def tune_reply(self, txt):
+        return txt
 
     def reply_message(self, msg, txt, *args, **kwargs):
-        msgreply = msg.reply(txt)
+        msgreply = msg.reply(self.tune_reply(txt))
         _to = msgreply['to']
-        if msgreply["html"]:
-            formated = self.format_message(txt)
-            if formated:
-                msgreply["html"]["body"] = formated
         msgreply.send()
         if self.config.get('img_to_oob', False):
             imgs = set([i[0] for i in url_img.findall(txt)])
