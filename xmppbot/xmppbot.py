@@ -23,14 +23,13 @@ bot's operation completely.
 """
 
 import inspect
-import logging
 import os
 import re
 import sys
 
-import sleekxmpp
+import slixmpp
 
-from .common import get_config
+from .basebot import BaseBot
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
@@ -64,17 +63,11 @@ def botcmd(*args, **kwargs):
         return lambda func: decorate(func, creator_order, **kwargs)
 
 
-class XmppBot(sleekxmpp.ClientXMPP):
+class XmppBot(BaseBot):
     MSG_ERROR_OCCURRED = "ERROR!!"
 
     def __init__(self, config_path):
-
-        self.config = get_config(config_path)
-
-        logging.basicConfig(level=self.config.get(
-            'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
-        self.log = logging.getLogger()
-
+        super().__init__(config_path)
         self.use_ipv6 = self.config.get("use_ipv6", True)
         self.delay = False
         self.commands = []
@@ -93,9 +86,6 @@ class XmppBot(sleekxmpp.ClientXMPP):
                           (order, " ".join(names)))
             self.commands.append(value)
             self.delay = self.delay or getattr(value, '_command_delay', False)
-
-        sleekxmpp.ClientXMPP.__init__(
-            self, self.config['user'], self.config['pass'])
 
         self.nick = self.config['user'].split("@")[0]
 
@@ -269,10 +259,3 @@ class XmppBot(sleekxmpp.ClientXMPP):
 
     def is_delay(self, msg):
         return self.delay and bool(msg['delay']._get_attr('stamp'))
-
-    def run(self):
-        if self.connect():
-            self.log.info("Bot started.")
-            self.process(block=True)
-        else:
-            self.log.info("Unable to connect.")

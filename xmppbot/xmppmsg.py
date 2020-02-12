@@ -1,17 +1,29 @@
 import time
 from os.path import expanduser
 
-import sleekxmpp
+import slixmpp
 from bs4 import BeautifulSoup, Tag
 
 from .common import get_config, to_xep0393
+from .basebot import BaseBot
+
+class BaseBot(slixmpp.ClientXMPP):
+    def __init__(self, config_path):
+        self.config = get_config(config_path)
+        super().__init__(self.config.xmpp.user, self.config.xmpp.pssw)
+        logging.basicConfig(level=self.config.get(
+            'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
+        self.log = logging.getLogger()
+
+    def run(self):
+        self.connect()
+        self.log.info("Bot started.")
+        self.process()
 
 
-class SendMsgBot(sleekxmpp.ClientXMPP):
-    def __init__(self, config):
-        self.config = get_config(config)
-        sleekxmpp.ClientXMPP.__init__(
-            self, self.config["user"], self.config["pass"])
+class SendMsgBot(BaseBot):
+    def __init__(self, config_path):
+        super().__init__(config_path)
         self.messages = []
         self.add_event_handler("session_start", self.start)
 
@@ -24,11 +36,16 @@ class SendMsgBot(sleekxmpp.ClientXMPP):
                               mbody=msg,
                               mtype='chat')
             time.sleep(0.1)
-        self.disconnect(wait=True)
+        self.disconnect()
 
     def run(self):
-        if self.messages and self.connect():
-            self.process(block=True)
+        if not self.messages:
+            return
+        with timeout(seconds=10):
+            try:
+                super().run()
+            except TimeoutError:
+                pass
 
 
 class XmppMsg:
@@ -45,8 +62,7 @@ class XmppMsg:
 
     @config.setter
     def config(self, config):
-        self._config = get_config(config)
-        self.bot = SendMsgBot(self._config)
+        self.bot = SendMsgBot(config)
         self.to = self._config.get("to", self.to)
 
     @property
@@ -88,9 +104,7 @@ class XmppMsg:
         self.bot.run()
 
     def reload(self, config=None):
-        if config:
-            self.config = config
-        self.bot = SendMsgBot(self.config)
+        self.bot = SendMsgBot(config or self.bot.config)
 
 
 def msg_to_xep0393(msg):

@@ -5,17 +5,11 @@ import os
 import re
 import subprocess
 import sys
-from urlparse import urlparse
+import urllib.parse as urlparse
 
 import yaml
 
-import ipgetter
 from xmppbot import XmppBot, botcmd
-
-if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
-
 
 class MyBot(XmppBot):
 
@@ -47,10 +41,6 @@ class MyBot(XmppBot):
                 out.append(self.shell("ril \"" + url + "\""))
         return "\n".join(out)
 
-    @botcmd(delay=True)
-    def ip(self, user, cmd, args):
-        return ipgetter.myip()
-
     @botcmd(names=["whoami", "last"])
     def command(self, user, cmd, args):
         return self.shell(cmd)
@@ -63,5 +53,5 @@ class MyBot(XmppBot):
 if __name__ == '__main__':
     path = os.path.dirname(os.path.realpath(__file__))
     os.chdir(path)
-    xmpp = BusBot("mybot.yml")
+    xmpp = MyBot("mybot.yaml")
     xmpp.run()
