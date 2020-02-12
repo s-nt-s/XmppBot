@@ -4,8 +4,9 @@ from os.path import expanduser
 import slixmpp
 from bs4 import BeautifulSoup, Tag
 
-from .common import get_config, to_xep0393
 from .basebot import BaseBot
+from .common import get_config, to_xep0393
+
 
 class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):

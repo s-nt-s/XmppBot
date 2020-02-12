@@ -4,12 +4,12 @@
 import os
 import re
 import subprocess
-import sys
 import urllib.parse as urlparse
 
 import yaml
 
 from xmppbot import XmppBot, botcmd
+
 
 class MyBot(XmppBot):
 

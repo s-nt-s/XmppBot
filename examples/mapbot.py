@@ -5,8 +5,8 @@ import os
 import re
 
 import requests
-
 from geopy.geocoders import Nominatim
+
 from xmppbot import XmppBot, botcmd
 
 #map_url = "http://tyler-demo.herokuapp.com/?lat={lat}&lon={lon}&width=3000&height=1688&zoom=19"

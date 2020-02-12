@@ -1,7 +1,9 @@
-import slixmpp
 import logging
 
+import slixmpp
+
 from .common import get_config
+
 
 class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):
