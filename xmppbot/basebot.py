@@ -1,9 +1,12 @@
 import logging
 
 import slixmpp
+import time
 
 from .common import get_config
 
+class ConnectionLost(Exception):
+    pass
 
 class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):
@@ -14,6 +17,14 @@ class BaseBot(slixmpp.ClientXMPP):
         self.log = logging.getLogger()
 
     def run(self):
-        self.connect()
-        self.log.info("Bot started.")
-        self.process()
+        try:
+            self.connect()
+            self.log.info("Bot started.")
+            self.process()
+        except ConnectionLost:
+            time.sleep(5)
+            self.run()
+
+    def connection_lost(self, *args, **kargv):
+        super().connection_lost(*args, **kargv)
+        raise ConnectionLost()
