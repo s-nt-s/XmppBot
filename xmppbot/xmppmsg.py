@@ -30,7 +30,7 @@ class SendMsgBot(BaseBot):
             return
         with timeout(seconds=10):
             try:
-                super().run()
+                super().run(loop=False)
             except TimeoutError:
                 pass
 

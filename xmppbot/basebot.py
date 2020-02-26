@@ -16,15 +16,15 @@ class BaseBot(slixmpp.ClientXMPP):
             'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
         self.log = logging.getLogger()
 
-    def run(self):
-        try:
+    def run(self, loop=True):
+        while True:
             self.connect()
             self.log.info("Bot started.")
             self.process()
-        except ConnectionLost:
+            if not loop:
+                return
             time.sleep(5)
-            self.run()
 
     def connection_lost(self, *args, **kargv):
         super().connection_lost(*args, **kargv)
-        raise ConnectionLost()
+        self.disconnect()
