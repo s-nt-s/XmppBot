@@ -1,4 +1,4 @@
-The XmppBot framework is powered by (Slixmpp)[https://slixmpp.readthedocs.io/]
+The XmppBot framework is powered by [Slixmpp](https://slixmpp.readthedocs.io/)
 and allows you to easily write bots that use the XMPP protocol.
 You can create commands by decorating functions in your subclass
 or customize the bot’s operation completely. MUCs are also supported.
