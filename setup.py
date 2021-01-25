@@ -16,7 +16,6 @@ setup(
     author='s-nt-s',
     author_email='santos82h@gmail.com',
     url=REPO,
-    download_url='',
     download_url = REPO+'/tarball/'+VERSION,
     keywords=['xmpp', 'bot'],
     license='GPLv3',
