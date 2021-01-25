@@ -29,7 +29,7 @@ class MapBot(XmppBot):
     def direccion(self, calle, user, **kwargs):
         location = Nominatim().geocode(calle)
         if not location:
-            return "No encontrado"
+            return "Not found"
         url_1 = map_url_1.format(lat=location.latitude, lon=location.longitude)
         url_2 = map_url_2.format(lat=location.latitude, lon=location.longitude)
 
@@ -40,7 +40,7 @@ class MapBot(XmppBot):
 
 
 if __name__ == '__main__':
-    path = os.path.dirname(os.path.realpath(__file__))
-    os.chdir(path)
-    xmpp = MapBot("map.yaml")
+    path = os.path.realpath(__file__)
+    path = os.path.dirname(path)
+    xmpp = MapBot("map.yml")
     xmpp.run()

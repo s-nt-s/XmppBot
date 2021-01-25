@@ -1,0 +1,9 @@
+user: 'map@example.xmpp'
+pass: 'fakepassword'
+auto: True
+avatar: 'wiki.png'
+vcard:
+  FN: Wikipedia
+  NICKNAME: Wikipedia
+  URL: https://github.com/s-nt-s/XmppBot
+  DESC: Ask me anything

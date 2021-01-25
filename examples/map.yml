@@ -1,0 +1,10 @@
+user: 'map@example.xmpp'
+pass: 'fakepassword'
+avatar: 'map.png'
+auto: True
+admin: 'admin@example.xmpp'
+vcard:
+  FN: Maps
+  NICKNAME: Maps
+  URL: https://github.com/s-nt-s/XmppBot
+  DESC: Find an address on my map

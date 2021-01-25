@@ -1,12 +1,14 @@
 import logging
+import time
 
 import slixmpp
-import time
 
 from .common import get_config
 
+
 class ConnectionLost(Exception):
     pass
+
 
 class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):

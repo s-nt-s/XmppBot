@@ -5,7 +5,6 @@ import os
 import re
 import subprocess
 import urllib.parse as urlparse
-import sys
 
 import yaml
 
@@ -56,9 +55,8 @@ class MyBot(XmppBot):
 
 
 if __name__ == '__main__':
-    conf = sys.argv[1] if len(sys.argv)==2 else "mybot.yaml"
-    path = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.realpath(__file__)
+    path = os.path.dirname(path)
     os.chdir(path)
-    print("Configuración:", conf)
-    xmpp = MyBot(conf)
+    xmpp = MyBot("mybot.yml")
     xmpp.run()

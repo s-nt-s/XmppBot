@@ -1,9 +1,9 @@
-user: 'bot@xmpp.jp'
-pass: 'password'
-roster: ['me@xmpp.jp']
+user: 'map@example.xmpp'
+pass: 'fakepassword'
+roster: ['me@example.xmpp']
 LOG: "DEBUG"
 avatar: 'avatar.png'
-vcard: 
+vcard:
   FN: A Bot
   NICKNAME: Bot
   URL: http://example.com

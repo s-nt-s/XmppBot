@@ -51,21 +51,12 @@ class WikiPedia:
             self.url = j["canonicalurl"]
 
 
-def get_options(b, ops):
-    b = b.lower()
-    ops = [i for i in set(ops) if i.lower() != b]
-    if len(ops) == 0:
-        return None
-    return sorted(ops)
-
-
 class WikiBot(XmppBot):
 
     def start(self, event):
         super().start(event)
         self.register_plugin('xep_0066')  # OOB
         self.register_plugin('xep_0231')  # BOB
-        # self.register_plugin('xep_0071') # XHTML-IM
 
     @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
     def wikipedia(self, busqueda, user, **kwargs):
@@ -82,18 +73,18 @@ class WikiBot(XmppBot):
             m['oob']['url'] = w.image
             m['body'] = w.image
             m.send()
-            #msg = msg+w.image+"\n"
         msg = msg+w.summary
         msg = msg+"\nFuente: "+w.url
         return msg
 
     @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
-    def todo_lo_demas(self, busqueda, **kwargs):
+    def anything_else(self, busqueda, **kwargs):
         return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
 
 
 if __name__ == '__main__':
-    path = os.path.dirname(os.path.realpath(__file__))
+    path = os.path.realpath(__file__)
+    path = os.path.dirname(path)
     os.chdir(path)
-    xmpp = WikiBot("wiki.yaml")
+    xmpp = WikiBot("wiki.yml")
     xmpp.run()
