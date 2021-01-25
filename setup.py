@@ -12,7 +12,7 @@ long_description = long_description.strip()
 setup(
     name='slixmppbot',
     packages=find_packages(),
-    version='1.0.2',
+    version='1.0.3',
     long_description=long_description,
     long_description_content_type="text/markdown",
     description='A framework for writing Jabber/XMPP bots',
@@ -26,5 +26,5 @@ setup(
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.5'
 )
