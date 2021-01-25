@@ -3,15 +3,15 @@ and allows you to easily write bots that use the XMPP protocol.
 You can create commands by decorating functions in your subclass
 or customize the bot’s operation completely. MUCs are also supported.
 
-You can see some examples in `examples` folder.
+You can see some examples in [`examples` folder](https://github.com/s-nt-s/XmppBot/tree/master/examples).
 
 You can install and unsintall with:
 
 ```
 # install
-pip3 install xmppbot
+pip3 install slixmppbot
 # uninstall
-pip3 uninstall xmppbot
+pip3 uninstall slixmppbot
 ```
 
 or
