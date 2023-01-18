@@ -1,11 +1,11 @@
 import time
 from os.path import expanduser
 
-import slixmpp
 from bs4 import BeautifulSoup, Tag
 
 from .basebot import BaseBot
-from .common import get_config, to_xep0393
+from .common import to_xep0393
+from .timeout import timeout
 
 
 class SendMsgBot(BaseBot):
@@ -37,20 +37,28 @@ class SendMsgBot(BaseBot):
 
 class XmppMsg:
     def __init__(self, config=expanduser("~/.xmpp.yml"), to=None):
-        self._config = None
         self._to = None
-        self.config = config
-        if to is not None:
-            self.to = to
+        self.bot = None
+        self.set_to(to)
+        self.set_config(config)
 
     @property
     def config(self):
-        return self._config
+        if self.bot is None:
+            return None
+        return self.bot.config
 
     @config.setter
     def config(self, config):
+        self.set_config(config)
+
+    def set_config(self, config):
+        if config is None:
+            self.bot = None
+            self.to = None
+            return
         self.bot = SendMsgBot(config)
-        self.to = self._config.get("to", self.to)
+        self.to = self.bot.config.get("to", self.to)
 
     @property
     def to(self):
@@ -58,12 +66,15 @@ class XmppMsg:
 
     @to.setter
     def to(self, to):
+        self.set_to(to)
+
+    def set_to(self, to):
         if to is None:
             self._to = None
         elif isinstance(to, str):
-            self._to = to.strip().split()
+            self._to = tuple(to.strip().split())
         elif isinstance(to, (set, list, tuple)):
-            self._to = to
+            self._to = tuple(to)
         else:
             raise Exception("to must be a str, set, list or tuple")
 

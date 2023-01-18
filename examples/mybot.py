@@ -6,8 +6,6 @@ import re
 import subprocess
 import urllib.parse as urlparse
 
-import yaml
-
 from xmppbot import XmppBot, botcmd
 
 
@@ -33,7 +31,7 @@ class MyBot(XmppBot):
     def urls(self, *args, user=None, text=None, msg=None):
         out = []
         for url in args:
-            if is_torrent(url):
+            if self.is_torrent(url):
                 # transmission or something like that
                 out.append(self.shell("trm \"" + url + "\""))
             else:
@@ -50,7 +48,7 @@ class MyBot(XmppBot):
         return self.shell("service " + args[1] + " " + args[0])
 
     @botcmd
-    def ping(self, *args, **kargv):
+    def ping(self, *args, **kvargs):
         return "pong"
 
 

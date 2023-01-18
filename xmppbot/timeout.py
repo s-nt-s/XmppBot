@@ -9,9 +9,9 @@ class timeout:
     def handle_timeout(self, signum, frame):
         raise TimeoutError(self.error_message)
 
-    def __enter__(self):
+    def __enter__(self, *args, **kvargs):
         signal.signal(signal.SIGALRM, self.handle_timeout)
         signal.alarm(self.seconds)
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, *args, **kvargs):
         signal.alarm(0)

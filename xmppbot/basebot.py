@@ -14,9 +14,8 @@ class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):
         self.config = get_config(config_path)
         super().__init__(self.config['user'], self.config['pass'])
-        logging.basicConfig(level=self.config.get(
-            'LOG', logging.INFO), format='%(levelname)-8s %(message)s')
-        self.log = logging.getLogger()
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(self.config.get('LOG', logging.INFO))
 
     def run(self, loop=True):
         while True:
@@ -27,6 +26,6 @@ class BaseBot(slixmpp.ClientXMPP):
                 return
             time.sleep(5)
 
-    def connection_lost(self, *args, **kargv):
-        super().connection_lost(*args, **kargv)
+    def connection_lost(self, *args, **kvargs):
+        super().connection_lost(*args, **kvargs)
         self.disconnect()

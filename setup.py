@@ -6,23 +6,26 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
+
 def read(fl):
     with open(fl, "r") as f:
         txt = f.read()
-        txt = txt.strip()
-        return txt
+    txt = txt.strip()
+    return txt
+
 
 def reqs(fl):
-    rqs=set()
+    rqs = set()
     with open(fl, "r") as f:
         for r in parse_requirements(f):
             rqs.add(r.name)
     return sorted(rqs)
 
+
 setup(
     name='slixmppbot',
     packages=find_packages(),
-    version='1.0.4',
+    version='1.0.5',
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     description='A framework for writing Jabber/XMPP bots',

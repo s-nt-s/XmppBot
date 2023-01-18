@@ -4,7 +4,6 @@
 import os
 import re
 
-import requests
 from geopy.geocoders import Nominatim
 
 from xmppbot import XmppBot, botcmd

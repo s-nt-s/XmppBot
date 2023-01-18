@@ -31,8 +31,8 @@ re_lf = re.compile(r" +$", re.MULTILINE)
 class Xep0393Converter(MarkdownConverter):
     """ Create XEP-0393 from html, see https://xmpp.org/extensions/xep-0393.html """
 
-    def __init__(self, *args, **kargv):
-        MarkdownConverter.__init__(self, *args, **kargv)
+    def __init__(self, *args, **kvargs):
+        MarkdownConverter.__init__(self, *args, **kvargs)
 
     def convert(self, html):
         if isinstance(html, (Tag, BeautifulSoup)):

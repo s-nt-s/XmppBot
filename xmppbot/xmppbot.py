@@ -25,19 +25,11 @@ bot's operation completely.
 import inspect
 import os
 import re
-import sys
-
-import slixmpp
 
 from .basebot import BaseBot
 
 sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
-
-if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
-
 creator_order = 0
 
 
@@ -71,7 +63,6 @@ class XmppBot(BaseBot):
         self.use_ipv6 = self.config.get("use_ipv6", True)
         self.delay = False
         self.commands = []
-        rg_commands = []
         plugins = set(self.config.get("plugins", "").split())
 
         commands = inspect.getmembers(self, inspect.ismethod)
@@ -146,7 +137,7 @@ class XmppBot(BaseBot):
                 with open(self.config['avatar'], 'rb') as avatar_file:
                     avatar_data = avatar_file.read()
             except IOError:
-                logging.debug('Could not load avatar')
+                self.log.debug('Could not load avatar')
             if avatar_data:
                 ext = os.path.splitext(self.config['avatar'])[1][1:]
                 mtype = 'image/' + ext

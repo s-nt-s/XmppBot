@@ -3,15 +3,10 @@
 
 import os
 import re
-import sys
 
 import requests
 
 from xmppbot import XmppBot, botcmd
-
-if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
 
 min_long = str(3)
 max_long = str(100)
