@@ -25,7 +25,7 @@ def reqs(fl):
 setup(
     name='slixmppbot',
     packages=find_packages(),
-    version='1.0.5',
+    version='1.0.6',
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     description='A framework for writing Jabber/XMPP bots',
