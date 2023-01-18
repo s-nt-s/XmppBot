@@ -18,14 +18,14 @@ def reqs(fl):
     rqs = set()
     with open(fl, "r") as f:
         for r in parse_requirements(f):
-            rqs.add(r.name)
+            rqs.add(str(r))
     return sorted(rqs)
 
 
 setup(
     name='slixmppbot',
     packages=find_packages(),
-    version='1.0.6',
+    version='1.0.8',
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     description='A framework for writing Jabber/XMPP bots',
