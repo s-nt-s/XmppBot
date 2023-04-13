@@ -1,86 +1,108 @@
 import functools
 import re
+import inspect
+
+from .basebot import Message
 
 re_sp = re.compile(r"\s+")
 
 class NotForMeException(Exception):
     pass
 
-def botcmd(*args, **kwargs):
-    """Decorator for bot command functions"""
-    global creator_order
-
-    def decorate(func, creator_order, name=None, names=None, delay=False, fromuser=None, regex=None, rg_mode="match"):
-        setattr(func, '_command', True)
-        setattr(func, '_command_names', names or [name or func.__name__])
-        setattr(func, '_command_delay', delay)
-        setattr(func, '_command_fromuser', fromuser)
-        setattr(func, '_command_regex', regex)
-        setattr(func, '_command_rg_mode', rg_mode)
-        setattr(func, '_command_order', creator_order)
-        return func
-
-    creator_order += 1
-
-    if len(args):
-        return decorate(args[0], creator_order, **kwargs)
-    else:
-        return lambda func: decorate(func, creator_order, **kwargs)
-
-class CMD:
-    def __init__(self, delay:bool=False, users:list[str]=None):
+class CmdBot:
+    INDEX = 0
+    def __init__(self, delay:bool=False, users:list[str]=None, name:str=None):
+        CmdBot.INDEX += 1
         self.func = None
         self.delay = delay
         self.users = users
-        self.func = None
+        self.index = CmdBot.INDEX
+        self.name = None
+        self.parameters = {k:False for k in (
+            "reply_to_user",
+            "reply_to_message"
+        )}
+        if isinstance(name, str):
+            self.name = tuple(name.split())
 
-    def isForMe(self, msg) -> bool:
+    def is_for_me(self, msg: Message) -> bool:
         if not callable(self.func):
             raise Exception("func is not callable")
-        if not(self.delay) and bool(msg['delay']._get_attr('stamp')):
+        if not(self.delay) and msg.is_delay:
             return False
-        if self.users and msg['from'].bare not in self.users:
+        if self.users and msg.sender not in self.users:
             return False
         try:
-            self.extract_args(msg)
+            self.extract_args(msg.text)
         except NotForMeException:
             return False
         return True
         
-    def extract_args(self, msg):
-        raise NotForMeException()
+    def extract_args(self, txt):
+        cmd = txt.split(None, 1)[0].lower()
+        if cmd not in self.names:
+            raise NotForMeException()
+        return tuple(txt.split()), None
     
-    def callCache(self, slf, msg):
-        args, kvargs = self.extract_args(msg)
+    def callCache(self, slf, msg: Message):
+        args, kvargs = self.extract_args(msg.text)
+        args = args or tuple()
+        kvargs = kvargs or dict()
+        if self.parameters['reply_to_user']:
+            kvargs['reply_to_user'] = msg.sender
+        if self.parameters['reply_to_message']:
+            kvargs['reply_to_message'] = msg
         return self.func(slf, *args, **kvargs)
 
     def __call__(self, func):
-        functools.update_wrapper(self, func)
-        global creator_order
-        creator_order += 1
-        setattr(func, '_command', True)
-        setattr(func, '_command_order', creator_order)
         self.func = func
-        return lambda *args, **kvargs: self.callCache(*args, **kvargs)
-
-class NameCmd(CMD):
-    def __init__(self, *args, alias:str|list[str]=None, **kvargs):
-        super().__init__(*args, **kvargs)
-        self.alias = None
-        if isinstance(alias, str):
-            self.alias = [alias]
-        elif isinstance(alias, list):
-            self.alias = alias
+        parameters = inspect.signature(func).parameters
+        for k in self.parameters.keys():
+            if k in parameters:
+                self.parameters[k] = True
+        def wrapper_function(*args, **kvargs):
+            return self.callCache(*args, **kvargs)
+        functools.update_wrapper(wrapper_function, func)
+        setattr(wrapper_function, 'cmd', self)
+        return wrapper_function
 
     @property
     def names(self):
-        if self.alias is not None:
-            return self.alias
-        return [self.func.__name__]
-    
-    def extract_args(self, msg) -> bool:
-        txt = re_sp.sub(" ", msg['body']).strip()
-        cmd = txt.split(' ', 1)[0].lower()
-        if cmd not in self.names:
+        names = self.name or [self.func.__name__]
+        return tuple(map(str.lower, names))
+
+class CmdRegExp(CmdBot):
+    def __init__(self, regex:str|re.Pattern, *args, flags=0, **kvargs):
+        super().__init__(*args, **kvargs)
+        self.regex = regex
+        if isinstance(regex, str):
+            self.regex = re.compile(regex, flags=flags)
+
+class CmdMatch(CmdRegExp):
+    def extract_args(self, txt):
+        m = self.regex.match(txt)
+        if m is None:
             raise NotForMeException()
-        return tuple(txt.split(' ')[1:]), None
+        return tuple(m.groups()), m.groupdict()
+
+class CmdSearch(CmdRegExp):
+    def extract_args(self, txt):
+        m = self.regex.search(txt)
+        if not m:
+            raise NotForMeException()
+        return tuple(m.groups()), m.groupdict()
+    
+class CmdFindAll(CmdRegExp):
+    def extract_args(self, txt):
+        m = tuple(self.regex.findall(txt))
+        if len(m)==0:
+            raise NotForMeException()
+        return m, None
+    
+class CmdDefault(CmdBot):
+    def is_for_me(self, msg: Message) -> bool:
+        if not callable(self.func):
+            raise Exception("func is not callable")
+        if not(self.delay) and msg.is_delay:
+            return False
+        return True

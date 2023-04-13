@@ -1,0 +1,9 @@
+user: 'map@example.xmpp'
+pass: 'fakepassword'
+auto: True
+avatar: 'rec/ping.png'
+vcard:
+  FN: Ping
+  NICKNAME: Ping
+  URL: https://github.com/s-nt-s/XmppBot
+  DESC: Say me ping

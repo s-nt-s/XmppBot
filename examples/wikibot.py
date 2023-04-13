@@ -5,8 +5,9 @@ import os
 import re
 
 import requests
+import logging
 
-from xmppbot import XmppBot, botcmd
+from xmppbot import XmppBot, CmdMatch, CmdDefault
 
 min_long = str(3)
 max_long = str(100)
@@ -48,13 +49,13 @@ class WikiPedia:
 
 class WikiBot(XmppBot):
 
-    def start(self, event):
-        super().start(event)
+    async def start(self, event):
+        await super().start(event)
         self.register_plugin('xep_0066')  # OOB
         self.register_plugin('xep_0231')  # BOB
 
-    @botcmd(regex=re.compile(r'^(.{'+min_long+','+max_long+'})$'), rg_mode="match")
-    def wikipedia(self, busqueda, user, **kwargs):
+    @CmdMatch(r'^(.{'+min_long+','+max_long+'})$')
+    def wikipedia(self, busqueda, reply_to_user):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
@@ -63,7 +64,7 @@ class WikiBot(XmppBot):
             msg = msg+w.title+"\n"
         if w.image:
             m = self.Message()
-            m['to'] = user
+            m['to'] = reply_to_user
             m['type'] = 'chat'
             m['oob']['url'] = w.image
             m['body'] = w.image
@@ -72,14 +73,15 @@ class WikiBot(XmppBot):
         msg = msg+"\nFuente: "+w.url
         return msg
 
-    @botcmd(regex=re.compile(r'^(.+)$'), rg_mode="match")
-    def anything_else(self, busqueda, **kwargs):
+    @CmdDefault()
+    def anything_else(self, *args, **kwargs):
         return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     path = os.path.realpath(__file__)
     path = os.path.dirname(path)
     os.chdir(path)
-    xmpp = WikiBot("wiki.yml")
+    xmpp = WikiBot("rec/wiki.yml")
     xmpp.run()

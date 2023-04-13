@@ -1,4 +1,5 @@
 .idea
+examples/xmppbot
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
