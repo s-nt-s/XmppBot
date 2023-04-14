@@ -4,7 +4,7 @@ from os.path import expanduser
 from bs4 import BeautifulSoup, Tag
 
 from .basebot import BaseBot
-from .common import to_xep0393
+from .xep0393converter import to_xep0393
 from .timeout import timeout
 
 
@@ -58,7 +58,7 @@ class XmppMsg:
             self.to = None
             return
         self.bot = SendMsgBot(config)
-        self.to = self.bot.config.get("to", self.to)
+        self.to = self.bot.config.to or self.to
 
     @property
     def to(self):

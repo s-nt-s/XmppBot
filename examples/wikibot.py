@@ -55,7 +55,7 @@ class WikiBot(XmppBot):
         self.register_plugin('xep_0231')  # BOB
 
     @CmdMatch(r'^(.{'+min_long+','+max_long+'})$')
-    def wikipedia(self, busqueda, reply_to_user):
+    def wikipedia(self, busqueda, reply_to_message):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
@@ -63,9 +63,7 @@ class WikiBot(XmppBot):
         if w.title.lower() != busqueda.lower():
             msg = msg+w.title+"\n"
         if w.image:
-            m = self.Message()
-            m['to'] = reply_to_user
-            m['type'] = 'chat'
+            m = reply_to_message.reply()
             m['oob']['url'] = w.image
             m['body'] = w.image
             m.send()

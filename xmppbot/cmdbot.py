@@ -3,6 +3,7 @@ import re
 import inspect
 
 from .basebot import Message
+from .common import to_tuple
 
 re_sp = re.compile(r"\s+")
 
@@ -11,19 +12,17 @@ class NotForMeException(Exception):
 
 class CmdBot:
     INDEX = 0
-    def __init__(self, delay:bool=False, users:list[str]=None, name:str=None):
+    def __init__(self, delay:bool=False, users:str|list[str]=None, name:str|list[str]=None):
         CmdBot.INDEX += 1
+        self.index = CmdBot.INDEX
         self.func = None
         self.delay = delay
-        self.users = users
-        self.index = CmdBot.INDEX
-        self.name = None
+        self.users = to_tuple(users)
+        self.name = to_tuple(name)
         self.parameters = {k:False for k in (
             "reply_to_user",
             "reply_to_message"
         )}
-        if isinstance(name, str):
-            self.name = tuple(name.split())
 
     def is_for_me(self, msg: Message) -> bool:
         if not callable(self.func):
@@ -37,34 +36,40 @@ class CmdBot:
         except NotForMeException:
             return False
         return True
-        
+
+    def __call__(self, func):
+        self.func = func
+        self.__mark_parameters()
+        def wrapper_function(*args, **kvargs):
+            return self.__call_func(*args, **kvargs)
+        functools.update_wrapper(wrapper_function, func)
+        setattr(wrapper_function, 'cmd', self)
+        return wrapper_function
+    
+    def __mark_parameters(self):
+        parameters = inspect.signature(self.func).parameters
+        for k in self.parameters.keys():
+            if k in parameters:
+                self.parameters[k] = True
+
+    def __call_func(self, slf, msg: Message):
+        args, kvargs = self.extract_args(msg.text)
+        args = args or tuple()
+        kvargs = kvargs or dict()
+        self.__add_parameters(kvargs, msg)
+        return self.func(slf, *args, **kvargs)
+    
     def extract_args(self, txt):
         cmd = txt.split(None, 1)[0].lower()
         if cmd not in self.names:
             raise NotForMeException()
         return tuple(txt.split()), None
     
-    def callCache(self, slf, msg: Message):
-        args, kvargs = self.extract_args(msg.text)
-        args = args or tuple()
-        kvargs = kvargs or dict()
+    def __add_parameters(self, kvargs, msg):
         if self.parameters['reply_to_user']:
             kvargs['reply_to_user'] = msg.sender
         if self.parameters['reply_to_message']:
             kvargs['reply_to_message'] = msg
-        return self.func(slf, *args, **kvargs)
-
-    def __call__(self, func):
-        self.func = func
-        parameters = inspect.signature(func).parameters
-        for k in self.parameters.keys():
-            if k in parameters:
-                self.parameters[k] = True
-        def wrapper_function(*args, **kvargs):
-            return self.callCache(*args, **kvargs)
-        functools.update_wrapper(wrapper_function, func)
-        setattr(wrapper_function, 'cmd', self)
-        return wrapper_function
 
     @property
     def names(self):
@@ -77,6 +82,9 @@ class CmdRegExp(CmdBot):
         self.regex = regex
         if isinstance(regex, str):
             self.regex = re.compile(regex, flags=flags)
+            
+    def extract_args(*args, **kvargs):
+        raise NotImplemented()
 
 class CmdMatch(CmdRegExp):
     def extract_args(self, txt):

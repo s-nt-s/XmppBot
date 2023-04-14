@@ -1,5 +1,5 @@
 user: 'map@example.xmpp'
-pass: 'fakepassword'
+password: 'fakepassword'
 roster: ['admin@example.xmpp']
 LOG: "DEBUG"
 avatar: 'rec/avatar.png'

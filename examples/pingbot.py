@@ -4,7 +4,7 @@
 import os
 import re
 import logging
-from xmppbot import XmppBot, CmdSearch, CmdRegExp, CmdBot, CmdFindAll, CmdMatch
+from xmppbot import XmppBot, CmdSearch, CmdBot, CmdFindAll, CmdMatch
 
 import logging
 
