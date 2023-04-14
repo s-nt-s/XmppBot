@@ -1,4 +1,6 @@
-from xmppbot import XmppBot, CmdBot, CmdMatch, CmdSearch, CmdFindAll, CmdDefault
+from xmppbot import \
+    XmppBot, CmdBot, CmdMatch, \
+    CmdSearch, CmdFindAll, CmdDefault
 from slixmpp.stanza import Message
 
 
