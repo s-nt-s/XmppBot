@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 import subprocess
 from urllib.parse import urlparse
 import logging
@@ -29,7 +28,9 @@ class MyBot(XmppBot):
         output = output.decode(sys.stdout.encoding)
         return output.strip()
 
-    @CmdFindAll(r'(?:https?://|magnet:\?xt=urn:btih:)(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', delay=True)
+    @CmdFindAll(
+        r'(?:https?://|magnet:\?xt=urn:btih:)(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+        delay=True)
     def urls(self, *args, user=None, text=None, msg=None):
         out = []
         for url in args:

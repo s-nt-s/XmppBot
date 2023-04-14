@@ -17,10 +17,11 @@ from .configbot import ConfigBot
 logger = logging.getLogger(__name__)
 re_sp = re.compile(r"\s+")
 
+
 class Message(slixmpp.stanza.Message):
 
     @classmethod
-    def init(cls, msg:slixmpp.stanza.Message):
+    def init(cls, msg: slixmpp.stanza.Message):
         msg.__class__ = cls
         return msg
 
@@ -29,14 +30,17 @@ class Message(slixmpp.stanza.Message):
         if self['type'] == 'groupchat':
             return self['from'].resource
         return self['from'].bare
-    
+
     @cached_property
     def text(self):
         return re_sp.sub(" ", self['body']).strip()
-    
+
     @cached_property
     def is_delay(self):
-        return isinstance(self['delay'], xep_0203.Delay) and bool(self['delay']._get_attr('stamp'))
+        return isinstance(
+            self['delay'], xep_0203.Delay) and bool(
+            self['delay']._get_attr('stamp'))
+
 
 class BaseBot(slixmpp.ClientXMPP):
     def __init__(self, config_path):
@@ -60,21 +64,19 @@ class BaseBot(slixmpp.ClientXMPP):
     @property
     def xep_0203(self) -> XEP_0203:
         return self['xep_0203']
-    
+
     @property
     def xep_0054(self) -> XEP_0054:
         return self['xep_0054']
-    
+
     @property
     def xep_0084(self) -> XEP_0084:
         return self['xep_0084']
-    
+
     @property
     def xep_0153(self) -> XEP_0153:
         return self['xep_0153']
-    
+
     @property
     def xep_0045(self) -> XEP_0045:
         return self['xep_0045']
-
-    

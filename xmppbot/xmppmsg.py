@@ -93,4 +93,3 @@ class XmppMsg:
 
     def reload(self, config=None):
         self.bot = SendMsgBot(config or self.bot.config)
-

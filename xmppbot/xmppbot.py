@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 re_sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
 
+
 class XmppBot(BaseBot):
     MSG_ERROR_OCCURRED = "ERROR!!"
 
@@ -65,10 +66,11 @@ class XmppBot(BaseBot):
         commands = []
         for k, v in self.__class__.__dict__.items():
             if isinstance(getattr(v, 'cmd', None), CmdBot):
-               commands.append(getattr(self, k))
+                commands.append(getattr(self, k))
         commands = sorted(commands, key=lambda x: x.cmd.index)
         for c in commands:
-            logger.info('Registered %dº command: %s' % (c.cmd.index, " ".join(c.cmd.names)))
+            logger.info('Registered %dº command: %s' %
+                        (c.cmd.index, " ".join(c.cmd.names)))
         return tuple(commands)
 
     def __validate(self):
@@ -90,7 +92,7 @@ class XmppBot(BaseBot):
         await self.__set_vcard()
         await self.__set_avatar()
         self.__join_rooms()
-    
+
     async def __set_vcard(self):
         if self.config.vcard is None:
             return
@@ -119,12 +121,17 @@ class XmppBot(BaseBot):
         else:
             used_xep84 = True
 
-        result = await self.xep_0153.set_avatar(avatar=avatar.content, mtype=avatar.mtype)
+        result = await self.xep_0153.set_avatar(
+            avatar=avatar.content,
+            mtype=avatar.mtype
+        )
         if isinstance(result, XMPPError):
             logger.debug('Could not set vCard avatar')
 
         if used_xep84:
-            result = await self.xep_0084.publish_avatar_metadata(items=[avatar_metadata])
+            result = await self.xep_0084.publish_avatar_metadata(
+                items=[avatar_metadata]
+            )
             if isinstance(result, XMPPError):
                 logger.debug('Could not publish XEP-0084 metadata')
 
@@ -145,14 +152,16 @@ class XmppBot(BaseBot):
         pass
 
     def read_message(self, msg):
-        msg:Message = Message.init(msg)
+        msg: Message = Message.init(msg)
 
         if self.__discard_message(msg):
             return
 
         cmd = self.__get_command(msg)
         if cmd is None:
-            logger.debug("Unknown command from %s: %s" % (msg.sender, msg.text))
+            logger.debug(
+                "Unknown command from %s: %s" %
+                (msg.sender, msg.text))
             return
 
         logger.debug("Command from %s: %s" % (msg.sender, msg.text))
@@ -160,7 +169,9 @@ class XmppBot(BaseBot):
         try:
             reply = cmd(msg)
         except Exception as error:
-            logger.exception('An error happened while processing the message: %s' % msg.text)
+            logger.exception(
+                'An error happened while processing the message: %s' %
+                msg.text)
             reply = self.command_error(msg, error)
         if reply:
             self.reply_message(msg, reply)
@@ -173,7 +184,7 @@ class XmppBot(BaseBot):
         if not self.__is_in_my_inbox(msg):
             return True
         return False
-    
+
     def __is_weird_message(self, msg):
         if not msg['body'] or not msg['from']:
             return True
@@ -183,13 +194,14 @@ class XmppBot(BaseBot):
         return False
 
     def __is_from_me(self, msg):
-        if msg['type'] == 'groupchat' and msg['from'].resource.lower() == self.nick.lower():
+        if msg['type'] == 'groupchat' and msg['from'].resource.lower(
+        ) == self.nick.lower():
             return True
         user = msg['from'].bare
         if user == self.boundjid.bare:
             return True
         return False
-    
+
     def __is_in_my_inbox(self, msg):
         if msg['type'] not in self.config.lisent:
             return False
@@ -200,7 +212,7 @@ class XmppBot(BaseBot):
 
     def __get_command(self, msg):
         for c in self.commands:
-            cmd:CmdBot = c.cmd
+            cmd: CmdBot = c.cmd
             if cmd.is_for_me(msg):
                 return c
         return None
@@ -221,4 +233,3 @@ class XmppBot(BaseBot):
                 imgreply = msg.reply()
                 imgreply['oob']['url'] = i
                 imgreply.send()
-

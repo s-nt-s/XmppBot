@@ -1,4 +1,3 @@
-
 def to_tuple(s, *default) -> tuple[str]:
     if s is None:
         return default

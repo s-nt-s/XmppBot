@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 
 import requests
 import logging
@@ -54,26 +53,27 @@ class WikiBot(XmppBot):
         self.register_plugin('xep_0066')  # OOB
         self.register_plugin('xep_0231')  # BOB
 
-    @CmdMatch(r'^(.{'+min_long+','+max_long+'})$')
+    @CmdMatch(r'^(.{' + min_long + ',' + max_long + '})$')
     def wikipedia(self, busqueda, reply_to_message):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
         msg = ""
         if w.title.lower() != busqueda.lower():
-            msg = msg+w.title+"\n"
+            msg = msg + w.title + "\n"
         if w.image:
             m = reply_to_message.reply()
             m['oob']['url'] = w.image
             m['body'] = w.image
             m.send()
-        msg = msg+w.summary
-        msg = msg+"\nFuente: "+w.url
+        msg = msg + w.summary
+        msg = msg + "\nFuente: " + w.url
         return msg
 
     @CmdDefault()
     def anything_else(self, *args, **kwargs):
-        return "Solo se admiten búsquedas de entre "+min_long+" y "+max_long+" caracteres"
+        return "Solo se admiten búsquedas de entre " + \
+            min_long + " y " + max_long + " caracteres"
 
 
 if __name__ == '__main__':
