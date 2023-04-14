@@ -153,17 +153,14 @@ class XmppBot(BaseBot):
 
     def read_message(self, msg):
         msg: Message = Message.init(msg)
-
         if self.__discard_message(msg):
             return
-
         cmd = self.__get_command(msg)
         if cmd is None:
             logger.debug(
                 "Unknown command from %s: %s" %
                 (msg.sender, msg.text))
             return
-
         logger.debug("Command from %s: %s" % (msg.sender, msg.text))
 
         try:

@@ -15,13 +15,19 @@ class Avatar:
         try:
             return cls(file)
         except TypeError:
-            logger.warn("avatar can't load because of %s is not a str" % file)
+            logger.warning(
+                "avatar can't load because of %s is not a str" %
+                file)
         except FileNotFoundError:
-            logger.warn(
+            logger.warning(
                 "avatar can't load because of file %s does not exist" %
                 file)
+        except BytesWarning:
+            logger.warning(
+                "avatar can't load because of file %s is empty" %
+                file)
         except IOError:
-            logger.warn(
+            logger.warning(
                 "avatar can't load because of file %s cant't be read" %
                 file)
         return None
@@ -33,6 +39,8 @@ class Avatar:
             raise FileNotFoundError()
         self.file = file
         self.content = self.__load_content()
+        if len(self.content) == 0:
+            raise BytesWarning()
         extension = self.file.rsplit(".", 1)[-1]
         self.mtype = 'image/' + extension
 

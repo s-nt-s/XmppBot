@@ -121,9 +121,5 @@ class CmdFindAll(CmdRegExp):
 
 
 class CmdDefault(CmdBot):
-    def is_for_me(self, msg: Message) -> bool:
-        if not callable(self.func):
-            raise Exception("func is not callable")
-        if not (self.delay) and msg.is_delay:
-            return False
-        return True
+    def extract_args(self, txt):
+        return tuple(txt.strip().split()), None

@@ -23,10 +23,13 @@ class Message(slixmpp.stanza.Message):
     @classmethod
     def init(cls, msg: slixmpp.stanza.Message):
         msg.__class__ = cls
-        return msg
+        new_msg: cls = msg
+        if not isinstance(new_msg, cls):
+            return None
+        return new_msg
 
     @cached_property
-    def sender(self):
+    def sender(self) -> str:
         if self['type'] == 'groupchat':
             return self['from'].resource
         return self['from'].bare
