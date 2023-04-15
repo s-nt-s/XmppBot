@@ -183,7 +183,7 @@ class XmppBot(BaseBot):
         return False
 
     def __is_weird_message(self, msg):
-        if not msg['body'] or not msg['from']:
+        if not msg['body'] or (msg['from'] is None or not str(msg['from'])):
             return True
         txt = re_sp.sub(" ", msg['body']).strip()
         if len(txt) == 0:
