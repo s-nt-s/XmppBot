@@ -26,6 +26,7 @@ class CmdBot:
         self.users = to_tuple(users)
         self.__name = names
         self.msg_parameter = None
+        self.need_arguments = True
         self.__validate()
 
     def __validate(self):
@@ -48,22 +49,28 @@ class CmdBot:
 
     def __call__(self, func):
         self.func = func
-        self.__mark_parameters()
+        self.__review_parameters()
         setattr(func, 'cmd', self)
         return func
 
-    def __mark_parameters(self):
+    def __review_parameters(self):
         parameters = inspect.signature(self.func).parameters
+        count = len(parameters)
         for k, v in parameters.items():
             if v.annotation == Message:
                 self.msg_parameter = k
+                count -= 1
+        self.need_arguments = bool(count)
 
-    def run(self, slf, msg: Message):
+    def run(self, msg: Message):
         args, kvargs = self.extract_args(msg.text)
         args = args or tuple()
         kvargs = kvargs or dict()
+        if not self.need_arguments:
+            args = tuple()
+            kvargs = dict()
         self.__add_parameters(kvargs, msg)
-        return self.func(slf, *args, **kvargs)
+        return self.func(*args, **kvargs)
 
     def extract_args(self, txt):
         spl = txt.split(None)

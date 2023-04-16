@@ -67,6 +67,10 @@ class XmppBot(BaseBot):
         for k, v in self.__class__.__dict__.items():
             cmd = getattr(v, 'cmd', None)
             if isinstance(cmd, CmdBot):
+                func = getattr(self, k, None)
+                if func is not None:
+                    cmd = getattr(func, 'cmd', None)
+            if isinstance(cmd, CmdBot):
                 commands.append(cmd)
         commands = sorted(commands, key=lambda x: x.index)
         for c in commands:
@@ -162,7 +166,7 @@ class XmppBot(BaseBot):
         logger.debug(f"Command from {msg.sender}: {msg.text}")
 
         try:
-            reply = cmd.run(self, msg)
+            reply = cmd.run(msg)
         except Exception as error:
             logger.exception(
                 'An error happened while processing the message: ' +
