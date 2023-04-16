@@ -12,24 +12,30 @@ class NotForMeException(Exception):
     pass
 
 
-class CmdBot:
+class CmdName:
     INDEX = 0
 
     def __init__(
             self,
+            *names: str,
             delay: bool = False,
-            users: str | list[str] = None,
-            name: str | list[str] = None):
-        CmdBot.INDEX += 1
-        self.index = CmdBot.INDEX
+            users: str | list[str] = None):
+        CmdName.INDEX += 1
+        self.index = CmdName.INDEX
         self.func = None
         self.delay = delay
         self.users = to_tuple(users)
-        self.name = to_tuple(name)
+        self.__name = names
         self.parameters = {k: False for k in (
             "reply_to_user",
             "reply_to_message"
         )}
+        self.__validate()
+
+    def __validate(self):
+        for n in self.__name:
+            if not isinstance(n, str) or len(n.split()) > 1:
+                raise ValueError("name must to be a str without spaces")
 
     def is_for_me(self, msg: Message) -> bool:
         if not callable(self.func):
@@ -81,11 +87,11 @@ class CmdBot:
 
     @property
     def names(self):
-        names = self.name or [self.func.__name__]
+        names = self.__name or [self.func.__name__]
         return tuple(map(str.lower, names))
 
 
-class CmdRegExp(CmdBot):
+class CmdRegExp(CmdName):
     def __init__(self, regex: str | re.Pattern, *args, flags=0, **kvargs):
         super().__init__(*args, **kvargs)
         self.regex = regex
@@ -120,6 +126,6 @@ class CmdFindAll(CmdRegExp):
         return m, None
 
 
-class CmdDefault(CmdBot):
+class CmdDefault(CmdName):
     def extract_args(self, txt):
         return tuple(txt.strip().split()), None

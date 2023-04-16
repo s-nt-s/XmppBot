@@ -27,7 +27,7 @@ import re
 from functools import cached_property
 from slixmpp.exceptions import XMPPError
 
-from .cmdbot import CmdBot
+from .cmdbot import CmdName
 from .basebot import BaseBot, Message
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class XmppBot(BaseBot):
     def __get_commands(self):
         commands = []
         for k, v in self.__class__.__dict__.items():
-            if isinstance(getattr(v, 'cmd', None), CmdBot):
+            if isinstance(getattr(v, 'cmd', None), CmdName):
                 commands.append(getattr(self, k))
         commands = sorted(commands, key=lambda x: x.cmd.index)
         for c in commands:
@@ -209,7 +209,7 @@ class XmppBot(BaseBot):
 
     def __get_command(self, msg):
         for c in self.commands:
-            cmd: CmdBot = c.cmd
+            cmd: CmdName = c.cmd
             if cmd.is_for_me(msg):
                 return c
         return None

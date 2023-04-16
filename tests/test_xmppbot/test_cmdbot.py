@@ -1,5 +1,5 @@
 from xmppbot import \
-    XmppBot, CmdBot, CmdMatch, \
+    XmppBot, CmdName, CmdMatch, \
     CmdSearch, CmdFindAll, CmdDefault
 from slixmpp.stanza import Message
 
@@ -40,7 +40,7 @@ def test_cmdbot_not_for_me():
     bot: XmppBot = build_bot({
         "user": "one@xmpp.com",
         "password": "xxx"
-    }, CmdBot, name="ping")
+    }, CmdName, "ping")
     reply = bot.read_message(
         _to='two@xmpp.com',
         _from='me@xmpp.com',
@@ -54,7 +54,7 @@ def test_cmdbot_wired_msg():
     bot: XmppBot = build_bot({
         "user": "one@xmpp.com",
         "password": "xxx"
-    }, CmdBot, name="ping")
+    }, CmdName, "ping")
     reply = bot.read_message(
         _to='one@xmpp.com',
         _from='me@xmpp.com',
@@ -68,7 +68,7 @@ def test_cmdbot_ok():
     bot: XmppBot = build_bot({
         "user": "one@xmpp.com",
         "password": "xxx"
-    }, CmdBot)
+    }, CmdName)
     for body, expected in {
         "ko": None,
         "ping": FakeBot.REPLY.format(('ping', ), {}),
@@ -90,7 +90,7 @@ def test_cmdbot_ok_alias():
     bot: XmppBot = build_bot({
         "user": "one@xmpp.com",
         "password": "xxx"
-    }, CmdBot, name="ping1")
+    }, CmdName, "ping1")
     for body, expected in {
         "ping": None,
         "ping1": FakeBot.REPLY.format(('ping1', ), {}),
