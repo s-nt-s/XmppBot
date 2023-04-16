@@ -3,11 +3,16 @@ import inspect
 
 from .basebot import Message
 from .common import to_tuple
+from slixmpp.stanza import Message as sliMessage
 
 re_sp = re.compile(r"\s+")
 
 
 class NotForMeException(Exception):
+    pass
+
+
+class BadMessageArgument(Exception):
     pass
 
 
@@ -55,22 +60,29 @@ class CmdBot:
 
     def __review_parameters(self):
         parameters = inspect.signature(self.func).parameters
-        count = len(parameters)
+        args = inspect.getfullargspec(self.func).args[1:]  # avoid count self
+        count = len(parameters) - 1  # avoid count self
         for k, v in parameters.items():
-            if v.annotation == Message:
-                self.msg_parameter = k
+            if issubclass(v.annotation, sliMessage):
+                if k in args and args[0] != k:
+                    raise BadMessageArgument(
+                        f"{v} argument must to be the first no-named args or a kwargs")
+                if k in args:
+                    self.msg_parameter = True
+                else:
+                    self.msg_parameter = k
                 count -= 1
         self.need_arguments = bool(count)
 
     def run(self, msg: Message):
-        args, kvargs = self.extract_args(msg.text)
+        args, kwargs = self.extract_args(msg.text)
         args = args or tuple()
-        kvargs = kvargs or dict()
+        kwargs = kwargs or dict()
         if not self.need_arguments:
             args = tuple()
-            kvargs = dict()
-        self.__add_parameters(kvargs, msg)
-        return self.func(*args, **kvargs)
+            kwargs = dict()
+        args, kwargs = self.__add_parameters(args, kwargs, msg)
+        return self.func(*args, **kwargs)
 
     def extract_args(self, txt):
         spl = txt.split(None)
@@ -80,9 +92,13 @@ class CmdBot:
             return tuple(spl[1:]), None
         return tuple(spl), None
 
-    def __add_parameters(self, kvargs, msg):
-        if self.msg_parameter:
-            kvargs[self.msg_parameter] = msg
+    def __add_parameters(self, args, kwargs, msg):
+        if isinstance(self.msg_parameter, str):
+            if self.msg_parameter:
+                kwargs[self.msg_parameter] = msg
+        elif self.msg_parameter is True:
+            args = (msg, ) + args
+        return args, kwargs
 
     @property
     def names(self):
@@ -91,13 +107,13 @@ class CmdBot:
 
 
 class CmdRegExp(CmdBot):
-    def __init__(self, regex: str | re.Pattern, *args, flags=0, **kvargs):
-        super().__init__(*args, **kvargs)
+    def __init__(self, regex: str | re.Pattern, *args, flags=0, **kwargs):
+        super().__init__(*args, **kwargs)
         self.regex = regex
         if isinstance(regex, str):
             self.regex = re.compile(regex, flags=flags)
 
-    def extract_args(*args, **kvargs):
+    def extract_args(*args, **kwargs):
         raise NotImplementedError()
 
 

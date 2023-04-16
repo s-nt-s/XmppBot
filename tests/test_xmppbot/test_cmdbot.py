@@ -1,17 +1,20 @@
 from xmppbot import \
     XmppBot, CmdBot, CmdMatch, \
     CmdSearch, CmdFindAll, CmdDefault
+from xmppbot.cmdbot import BadMessageArgument
 from slixmpp.stanza import Message
+import pytest
 
 
 class FakeBot(XmppBot):
-    REPLY = "args={}, kvargs={}"
+    REPLY = "args={}, kwargs={}"
 
-    def read_message(self, **kvargs):
+    def read_message(self, **kwargs):
         self.reply = None
         msg = Message()
-        for k, v in kvargs.items():
+        for k, v in kwargs.items():
             msg[k.lstrip("_")] = v
+        self.sent_menssage = msg
         super().read_message(msg)
         return self.reply
 
@@ -19,9 +22,9 @@ class FakeBot(XmppBot):
         self.reply = txt
 
 
-def build_bot(config_path, cmd, *args, **kvargs):
+def build_bot(config_path, cmd, *args, **kwargs):
     class Bot(FakeBot):
-        @cmd(*args, **kvargs)
+        @cmd(*args, **kwargs)
         def ping(self, *args, **kvarg):
             return Bot.REPLY.format(args, kvarg)
 
@@ -29,9 +32,9 @@ def build_bot(config_path, cmd, *args, **kvargs):
     return obj
 
 
-def buil_message(*args, **kvargs):
+def buil_message(*args, **kwargs):
     msg = Message()
-    for k, v in kvargs.items():
+    for k, v in kwargs.items():
         msg[k.lstrip("_")] = v
     return msg
 
@@ -192,3 +195,32 @@ def test_cmddefault_ok():
             assert reply is None
         else:
             assert reply == expected
+
+
+def test_add_paramters():
+    config = {
+        "user": "one@xmpp.com",
+        "password": "xxx",
+        "admin": "me@xmpp.com"
+    }
+
+    with pytest.raises(BadMessageArgument):
+        class BotKO(FakeBot):
+            @CmdDefault()
+            def ping(self, a, b: Message, **kwarg):
+                return b
+
+    class Bot2(FakeBot):
+        @CmdDefault()
+        def ping(self, b: Message, *args):
+            return b
+
+    bot = Bot2(config)
+    reply = bot.read_message(
+        _to='one@xmpp.com',
+        _from='me@xmpp.com',
+        _type='chat',
+        _body="hi hi hi hi"
+    )
+
+    assert bot.sent_menssage == reply

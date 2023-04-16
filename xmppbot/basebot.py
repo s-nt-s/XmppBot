@@ -60,8 +60,8 @@ class BaseBot(slixmpp.ClientXMPP):
                 return
             time.sleep(5)
 
-    def connection_lost(self, *args, **kvargs):
-        super().connection_lost(*args, **kvargs)
+    def connection_lost(self, *args, **kwargs):
+        super().connection_lost(*args, **kwargs)
         self.disconnect()
 
     @property

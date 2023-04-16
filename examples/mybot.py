@@ -50,7 +50,7 @@ class MyBot(XmppBot):
         return self.shell("service " + service + " " + command)
 
     @CmdBot()
-    def ping(self, *args, **kvargs):
+    def ping(self, *args, **kwargs):
         return "pong"
 
 

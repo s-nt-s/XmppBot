@@ -26,6 +26,7 @@ import logging
 import re
 from functools import cached_property
 from slixmpp.exceptions import XMPPError
+import traceback
 
 from .cmdbot import CmdBot
 from .basebot import BaseBot, Message
@@ -70,8 +71,8 @@ class XmppBot(BaseBot):
                 func = getattr(self, k, None)
                 if func is not None:
                     cmd = getattr(func, 'cmd', None)
-            if isinstance(cmd, CmdBot):
-                commands.append(cmd)
+                    cmd.func = func
+                    commands.append(cmd)
         commands = sorted(commands, key=lambda x: x.index)
         for c in commands:
             logger.info(f'Registered {c.index}º command: ' + " ".join(c.names))
@@ -216,6 +217,8 @@ class XmppBot(BaseBot):
         return None
 
     def command_error(self, msg, error):
+        if msg.sender in self.config.admin:
+            return str(error) + "\n\n" + traceback.format_exc()
         return self.MSG_ERROR_OCCURRED
 
     def tune_reply(self, txt):

@@ -11,24 +11,24 @@ class PingBot(XmppBot):
     """Example bot"""
 
     @CmdBot()
-    def ping(self, *args, **kvargs):
-        return "ping args={} kvargs={}".format(args, kvargs)
+    def ping(self, *args, **kwargs):
+        return "ping args={} kwargs={}".format(args, kwargs)
 
     @CmdBot("pingX", "pingY")
-    def ping1(self, *args, **kvargs):
-        return "ping1 args={} kvargs={}".format(args, kvargs)
+    def ping1(self, *args, **kwargs):
+        return "ping1 args={} kwargs={}".format(args, kwargs)
 
     @CmdMatch(r"(match)(?P<ping>ping)")
-    def ping2(self, *args, **kvargs):
-        return "ping2 args={} kvargs={}".format(args, kvargs)
+    def ping2(self, *args, **kwargs):
+        return "ping2 args={} kwargs={}".format(args, kwargs)
 
     @CmdSearch(r"(search)(?P<ping>ping)")
-    def ping3(self, *args, **kvargs):
-        return "ping3 args={} kvargs={}".format(args, kvargs)
+    def ping3(self, *args, **kwargs):
+        return "ping3 args={} kwargs={}".format(args, kwargs)
 
     @CmdFindAll(r"findallping.?", flags=re.IGNORECASE)
-    def ping4(self, *args, **kvargs):
-        return "ping4 args={} kvargs={}".format(args, kvargs)
+    def ping4(self, *args, **kwargs):
+        return "ping4 args={} kwargs={}".format(args, kwargs)
 
 
 if __name__ == '__main__':

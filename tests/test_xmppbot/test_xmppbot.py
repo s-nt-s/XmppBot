@@ -3,8 +3,8 @@ from slixmpp.stanza import Message
 
 
 class FakeBot(XmppBot):
-    def __init__(self, *args, **kvargs):
-        super().__init__(*args, **kvargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         for name, func in XmppBot.__dict__.items():
             if name.startswith('_XmppBot__') and callable(func):
                 new_name = '__' + name.split('__', 1)[-1]
@@ -19,13 +19,13 @@ class FakeBot(XmppBot):
         return ""
 
 
-def build_msg(**kvargs):
+def build_msg(**kwargs):
     msg = Message()
     msg['from'] = 'from@xmpp.com'
     msg['to'] = 'to@xmpp.com'
     msg['type'] = 'chat'
     msg['body'] = "this is a message"
-    for k, v in kvargs.items():
+    for k, v in kwargs.items():
         msg[k.lstrip("_")] = v
     return msg
 
