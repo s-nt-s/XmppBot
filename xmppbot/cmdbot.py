@@ -1,4 +1,3 @@
-import functools
 import re
 import inspect
 
@@ -12,7 +11,7 @@ class NotForMeException(Exception):
     pass
 
 
-class CmdName:
+class CmdBot:
     INDEX = 0
 
     def __init__(
@@ -20,16 +19,13 @@ class CmdName:
             *names: str,
             delay: bool = False,
             users: str | list[str] = None):
-        CmdName.INDEX += 1
-        self.index = CmdName.INDEX
+        CmdBot.INDEX += 1
+        self.index = CmdBot.INDEX
         self.func = None
         self.delay = delay
         self.users = to_tuple(users)
         self.__name = names
-        self.parameters = {k: False for k in (
-            "reply_to_user",
-            "reply_to_message"
-        )}
+        self.msg_parameter = None
         self.__validate()
 
     def __validate(self):
@@ -53,20 +49,16 @@ class CmdName:
     def __call__(self, func):
         self.func = func
         self.__mark_parameters()
-
-        def wrapper_function(*args, **kvargs):
-            return self.__call_func(*args, **kvargs)
-        functools.update_wrapper(wrapper_function, func)
-        setattr(wrapper_function, 'cmd', self)
-        return wrapper_function
+        setattr(func, 'cmd', self)
+        return func
 
     def __mark_parameters(self):
         parameters = inspect.signature(self.func).parameters
-        for k in self.parameters.keys():
-            if k in parameters:
-                self.parameters[k] = True
+        for k, v in parameters.items():
+            if v.annotation == Message:
+                self.msg_parameter = k
 
-    def __call_func(self, slf, msg: Message):
+    def run(self, slf, msg: Message):
         args, kvargs = self.extract_args(msg.text)
         args = args or tuple()
         kvargs = kvargs or dict()
@@ -74,16 +66,16 @@ class CmdName:
         return self.func(slf, *args, **kvargs)
 
     def extract_args(self, txt):
-        cmd = txt.split(None, 1)[0].lower()
-        if cmd not in self.names:
+        spl = txt.split(None)
+        if spl[0].lower() not in self.names:
             raise NotForMeException()
-        return tuple(txt.split()), None
+        if len(self.names) == 1:
+            return tuple(spl[1:]), None
+        return tuple(spl), None
 
     def __add_parameters(self, kvargs, msg):
-        if self.parameters['reply_to_user']:
-            kvargs['reply_to_user'] = msg.sender
-        if self.parameters['reply_to_message']:
-            kvargs['reply_to_message'] = msg
+        if self.msg_parameter:
+            kvargs[self.msg_parameter] = msg
 
     @property
     def names(self):
@@ -91,7 +83,7 @@ class CmdName:
         return tuple(map(str.lower, names))
 
 
-class CmdRegExp(CmdName):
+class CmdRegExp(CmdBot):
     def __init__(self, regex: str | re.Pattern, *args, flags=0, **kvargs):
         super().__init__(*args, **kvargs)
         self.regex = regex
@@ -126,6 +118,6 @@ class CmdFindAll(CmdRegExp):
         return m, None
 
 
-class CmdDefault(CmdName):
+class CmdDefault(CmdBot):
     def extract_args(self, txt):
         return tuple(txt.strip().split()), None

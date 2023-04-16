@@ -4,17 +4,17 @@
 import os
 import re
 import logging
-from xmppbot import XmppBot, CmdSearch, CmdName, CmdFindAll, CmdMatch
+from xmppbot import XmppBot, CmdSearch, CmdBot, CmdFindAll, CmdMatch
 
 
 class PingBot(XmppBot):
     """Example bot"""
 
-    @CmdName()
+    @CmdBot()
     def ping(self, *args, **kvargs):
         return "ping args={} kvargs={}".format(args, kvargs)
 
-    @CmdName("pingX", "pingY")
+    @CmdBot("pingX", "pingY")
     def ping1(self, *args, **kvargs):
         return "ping1 args={} kvargs={}".format(args, kvargs)
 

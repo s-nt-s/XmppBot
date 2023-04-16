@@ -13,12 +13,3 @@ pip3 install slixmppbot
 # uninstall
 pip3 uninstall slixmppbot
 ```
-
-or
-
-```
-# install
-python3 setup.py install --record files.txt
-# uninstall
-xargs rm -rf < files.txt
-```

@@ -27,7 +27,7 @@ import re
 from functools import cached_property
 from slixmpp.exceptions import XMPPError
 
-from .cmdbot import CmdName
+from .cmdbot import CmdBot
 from .basebot import BaseBot, Message
 
 logger = logging.getLogger(__name__)
@@ -63,14 +63,14 @@ class XmppBot(BaseBot):
         self.add_event_handler("groupchat_subject", self.groupchat_subject)
 
     def __get_commands(self):
-        commands = []
+        commands: list[CmdBot] = []
         for k, v in self.__class__.__dict__.items():
-            if isinstance(getattr(v, 'cmd', None), CmdName):
-                commands.append(getattr(self, k))
-        commands = sorted(commands, key=lambda x: x.cmd.index)
+            cmd = getattr(v, 'cmd', None)
+            if isinstance(cmd, CmdBot):
+                commands.append(cmd)
+        commands = sorted(commands, key=lambda x: x.index)
         for c in commands:
-            logger.info('Registered %dº command: %s' %
-                        (c.cmd.index, " ".join(c.cmd.names)))
+            logger.info(f'Registered {c.index}º command: ' + " ".join(c.names))
         return tuple(commands)
 
     def __validate(self):
@@ -82,7 +82,7 @@ class XmppBot(BaseBot):
     @cached_property
     def allow_delay(self) -> bool:
         for c in self.commands:
-            if c.cmd.delay is True:
+            if c.delay is True:
                 return True
         return False
 
@@ -157,17 +157,15 @@ class XmppBot(BaseBot):
             return
         cmd = self.__get_command(msg)
         if cmd is None:
-            logger.debug(
-                "Unknown command from %s: %s" %
-                (msg.sender, msg.text))
+            logger.debug(f"Unknown command from {msg.sender}: {msg.text}")
             return
-        logger.debug("Command from %s: %s" % (msg.sender, msg.text))
+        logger.debug(f"Command from {msg.sender}: {msg.text}")
 
         try:
-            reply = cmd(msg)
+            reply = cmd.run(self, msg)
         except Exception as error:
             logger.exception(
-                'An error happened while processing the message: %s' %
+                'An error happened while processing the message: ' +
                 msg.text)
             reply = self.command_error(msg, error)
         if reply:
@@ -207,11 +205,10 @@ class XmppBot(BaseBot):
             return False
         return True
 
-    def __get_command(self, msg):
-        for c in self.commands:
-            cmd: CmdName = c.cmd
+    def __get_command(self, msg) -> CmdBot:
+        for cmd in self.commands:
             if cmd.is_for_me(msg):
-                return c
+                return cmd
         return None
 
     def command_error(self, msg, error):

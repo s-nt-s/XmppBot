@@ -15,21 +15,15 @@ class Avatar:
         try:
             return cls(file)
         except TypeError:
-            logger.warning(
-                "avatar can't load because of %s is not a str" %
-                file)
+            logger.warning(f"avatar can't load because of {file} is not a str")
         except FileNotFoundError:
             logger.warning(
-                "avatar can't load because of file %s does not exist" %
-                file)
+                f"avatar can't load because of {file} does not exist")
         except BytesWarning:
-            logger.warning(
-                "avatar can't load because of file %s is empty" %
-                file)
+            logger.warning(f"avatar can't load because of {file} is empty")
         except IOError:
             logger.warning(
-                "avatar can't load because of file %s cant't be read" %
-                file)
+                f"avatar can't load because of {file} cant't be read")
         return None
 
     def __init__(self, file: str):
@@ -82,6 +76,7 @@ class ConfigBot:
             avatar: str = None,
             roster: str | list[str] = None,
             rooms: str | list[str] = None,
+            admin: str | list[str] = None,
             plugins: str | list[str] = DEFAULT_PLUGINS,
             lisent: str | list[str] = DEFAULT_LISENT,
             to: str | list[str] = None,
@@ -99,6 +94,7 @@ class ConfigBot:
         self.rooms = to_tuple(rooms)
         self.plugins = to_tuple(plugins)
         self.lisent = to_tuple(lisent)
+        self.admin = to_tuple(admin)
         self.to = to_tuple(to)
         self.__validate()
         self.__review_lisent()

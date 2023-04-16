@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import logging
 import sys
 
-from xmppbot import XmppBot, CmdName, CmdFindAll, CmdMatch
+from xmppbot import XmppBot, CmdBot, CmdFindAll, CmdMatch
 
 
 class MyBot(XmppBot):
@@ -41,7 +41,7 @@ class MyBot(XmppBot):
                 out.append(self.shell("ril \"" + url + "\""))
         return "\n".join(out)
 
-    @CmdName("whoami", "last")
+    @CmdBot("whoami", "last")
     def command(self, cmd, user=None, text=None, msg=None):
         return self.shell(cmd)
 
@@ -49,7 +49,7 @@ class MyBot(XmppBot):
     def service(self, command, service):
         return self.shell("service " + service + " " + command)
 
-    @CmdName()
+    @CmdBot()
     def ping(self, *args, **kvargs):
         return "pong"
 
