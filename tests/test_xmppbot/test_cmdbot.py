@@ -205,10 +205,16 @@ def test_add_paramters():
     }
 
     with pytest.raises(BadMessageArgument):
-        class BotKO(FakeBot):
+        class BotKO1(FakeBot):
             @CmdDefault()
             def ping(self, a, b: Message, **kwarg):
                 return b
+
+    with pytest.raises(BadMessageArgument):
+        class BotKO2(FakeBot):
+            @CmdDefault()
+            def ping(self, a: Message, *args, b: Message = None, **kwarg):
+                return a
 
     class Bot2(FakeBot):
         @CmdDefault()
@@ -216,6 +222,21 @@ def test_add_paramters():
             return b
 
     bot = Bot2(config)
+    reply = bot.read_message(
+        _to='one@xmpp.com',
+        _from='me@xmpp.com',
+        _type='chat',
+        _body="hi hi hi hi"
+    )
+
+    assert bot.sent_menssage == reply
+
+    class Bot3(FakeBot):
+        @CmdDefault()
+        def ping(self, *args, a: Message = None, **kwargs):
+            return a
+
+    bot = Bot3(config)
     reply = bot.read_message(
         _to='one@xmpp.com',
         _from='me@xmpp.com',

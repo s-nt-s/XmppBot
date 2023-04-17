@@ -1,5 +1,5 @@
 import re
-import inspect
+from inspect import getfullargspec
 
 from .basebot import Message
 from .common import to_tuple
@@ -14,6 +14,17 @@ class NotForMeException(Exception):
 
 class BadMessageArgument(Exception):
     pass
+
+
+def countitems(*args):
+    count = 0
+    for a in args:
+        if a is not None:
+            if hasattr(a, "__len__"):
+                count += len(a)
+            else:
+                count += 1
+    return count
 
 
 class CmdBot:
@@ -59,14 +70,17 @@ class CmdBot:
         return func
 
     def __review_parameters(self):
-        parameters = inspect.signature(self.func).parameters
-        args = inspect.getfullargspec(self.func).args[1:]  # avoid count self
-        count = len(parameters) - 1  # avoid count self
-        for k, v in parameters.items():
-            if issubclass(v.annotation, sliMessage):
+        spec = getfullargspec(self.func)
+        args = spec.args[1:]  # avoid count self
+        count = countitems(args, spec.kwonlyargs, spec.varargs, spec.varkw)
+        for k, v in spec.annotations.items():
+            if issubclass(v, sliMessage):
+                if self.msg_parameter is not None:
+                    raise BadMessageArgument(
+                        f"You can only have one single {sliMessage.__name__} argument")
                 if k in args and args[0] != k:
                     raise BadMessageArgument(
-                        f"{v} argument must to be the first no-named args or a kwargs")
+                        f"{sliMessage.__name__} argument must to be the first no-named args or a kwargs")
                 if k in args:
                     self.msg_parameter = True
                 else:
