@@ -6,7 +6,7 @@ import os
 import requests
 import logging
 
-from xmppbot import XmppBot, CmdMatch, CmdDefault
+from xmppbot import XmppBot, CmdMatch, CmdDefault, Message
 
 min_long = str(3)
 max_long = str(100)
@@ -54,7 +54,7 @@ class WikiBot(XmppBot):
         self.register_plugin('xep_0231')  # BOB
 
     @CmdMatch(r'^(.{' + min_long + ',' + max_long + '})$')
-    def wikipedia(self, busqueda, reply_to_message):
+    def wikipedia(self, reply_to_message: Message, busqueda):
         w = WikiPedia(busqueda)
         if w.ko:
             return "Tu búsqueda no obtiene resultados."
