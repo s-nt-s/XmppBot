@@ -5,6 +5,8 @@ import os
 
 import requests
 import logging
+import sys
+from os.path import isfile, realpath, dirname
 
 from xmppbot import XmppBot, CmdMatch, CmdDefault, Message
 
@@ -48,8 +50,8 @@ class WikiPedia:
 
 class WikiBot(XmppBot):
 
-    async def start(self, event):
-        await super().start(event)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.register_plugin('xep_0066')  # OOB
         self.register_plugin('xep_0231')  # BOB
 
@@ -78,8 +80,10 @@ class WikiBot(XmppBot):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    path = os.path.realpath(__file__)
-    path = os.path.dirname(path)
+    path = realpath(__file__)
+    path = dirname(path)
     os.chdir(path)
-    xmpp = WikiBot("rec/wiki.yml")
+    if len(sys.argv) < 2 or not isfile(sys.argv[1]):
+        sys.exit("Need file config as parameter")
+    xmpp = WikiBot(sys.argv[1])
     xmpp.run()
