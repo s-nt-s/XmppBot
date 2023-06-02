@@ -16,10 +16,13 @@ class SendMsgBot(BaseBot):
     async def start(self, event):
         await self.get_roster()
         self.send_presence()
-        rooms = set(self.config.rooms).intersection(tm[0] for tm in self.messages)
+        rooms = set(
+            self.config.rooms).intersection(
+            tm[0] for tm in self.messages)
 
         for room in rooms:
             await self.xep_0045.join_muc(room, self.config.user.split("@")[0])
+            time.sleep(0.1)
         while self.messages:
             to, msg = self.messages.pop(0)
             mtype = 'chat'
