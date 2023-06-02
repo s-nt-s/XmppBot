@@ -8,17 +8,26 @@ from .timeout import timeout
 class SendMsgBot(BaseBot):
     def __init__(self, config_path):
         super().__init__(config_path)
+        if self.config.rooms:
+            self.register_plugin('xep_0045')  # Multi-User Chat
         self.messages = []
         self.add_event_handler("session_start", self.start)
 
     async def start(self, event):
+        await self.get_roster()
         self.send_presence()
-        self.get_roster()
+        rooms = set(self.config.rooms).intersection(tm[0] for tm in self.messages)
+
+        for room in rooms:
+            await self.xep_0045.join_muc(room, self.config.user.split("@")[0])
         while self.messages:
             to, msg = self.messages.pop(0)
+            mtype = 'chat'
+            if to in rooms:
+                mtype = 'groupchat'
             self.send_message(mto=to,
                               mbody=msg,
-                              mtype='chat')
+                              mtype=mtype)
             time.sleep(0.1)
         self.disconnect()
 
