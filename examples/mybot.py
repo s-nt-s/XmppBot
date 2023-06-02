@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-import re
 import subprocess
-import urllib.parse as urlparse
+from urllib.parse import urlparse
+import logging
+import sys
 
-from xmppbot import XmppBot, botcmd
+from xmppbot import XmppBot, CmdBot, CmdFindAll, CmdMatch
 
 
 class MyBot(XmppBot):
@@ -22,12 +23,13 @@ class MyBot(XmppBot):
         return False
 
     def shell(self, cmd):
-        p = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        return out.strip()
+        output = subprocess.check_output(cmd.split())
+        output = output.decode(sys.stdout.encoding)
+        return output.strip()
 
-    @botcmd(rg_mode="findall", delay=True, regex=re.compile(r'(?:https?://|magnet:\?xt=urn:btih:)(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'))
+    @CmdFindAll(
+        r'(?:https?://|magnet:\?xt=urn:btih:)(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
+        delay=True)
     def urls(self, *args, user=None, text=None, msg=None):
         out = []
         for url in args:
@@ -39,22 +41,24 @@ class MyBot(XmppBot):
                 out.append(self.shell("ril \"" + url + "\""))
         return "\n".join(out)
 
-    @botcmd(names=["whoami", "last"])
+    @CmdBot("whoami", "last")
     def command(self, cmd, user=None, text=None, msg=None):
         return self.shell(cmd)
 
-    @botcmd(regex=re.compile(r'^(start|stop|status)\s+(tor|sshd|shellinabox|sslh)$'), rg_mode="match")
-    def service(self, *args, user=None, text=None, msg=None):
-        return self.shell("service " + args[1] + " " + args[0])
+    @CmdMatch(r'^(start|stop|status)\s+(tor|sshd|shellinabox|sslh)$')
+    def service(self, command, service):
+        return self.shell("service " + service + " " + command)
 
-    @botcmd
-    def ping(self, *args, **kvargs):
+    @CmdBot()
+    def ping(self, *args, **kwargs):
         return "pong"
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
+
     path = os.path.realpath(__file__)
     path = os.path.dirname(path)
     os.chdir(path)
-    xmpp = MyBot("mybot.yml")
+    xmpp = MyBot("rec/mybot.yml")
     xmpp.run()

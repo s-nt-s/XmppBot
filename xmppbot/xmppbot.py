@@ -22,37 +22,19 @@ decorating functions in your subclass or customize the
 bot's operation completely.
 """
 
-import inspect
-import os
+import logging
 import re
+from functools import cached_property
+from slixmpp.exceptions import XMPPError
+import traceback
 
-from .basebot import BaseBot
+from .cmdbot import CmdBot
+from .basebot import BaseBot, Message
 
-sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
+logger = logging.getLogger(__name__)
+
+re_sp = re.compile(r"\s+", re.MULTILINE | re.UNICODE)
 url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
-creator_order = 0
-
-
-def botcmd(*args, **kwargs):
-    """Decorator for bot command functions"""
-    global creator_order
-
-    def decorate(func, creator_order, name=None, names=None, delay=False, fromuser=None, regex=None, rg_mode="match"):
-        setattr(func, '_command', True)
-        setattr(func, '_command_names', names or [name or func.__name__])
-        setattr(func, '_command_delay', delay)
-        setattr(func, '_command_fromuser', fromuser)
-        setattr(func, '_command_regex', regex)
-        setattr(func, '_command_rg_mode', rg_mode)
-        setattr(func, '_command_order', creator_order)
-        return func
-
-    creator_order += 1
-
-    if len(args):
-        return decorate(args[0], creator_order, **kwargs)
-    else:
-        return lambda func: decorate(func, creator_order, **kwargs)
 
 
 class XmppBot(BaseBot):
@@ -60,106 +42,113 @@ class XmppBot(BaseBot):
 
     def __init__(self, config_path):
         super().__init__(config_path)
-        self.use_ipv6 = self.config.get("use_ipv6", True)
-        self.delay = False
-        self.commands = []
-        plugins = set(self.config.get("plugins", "").split())
+        self.commands = self.__get_commands()
+        self.__validate()
 
-        commands = inspect.getmembers(self, inspect.ismethod)
-        commands = filter(lambda x: getattr(x[1], '_command', False), commands)
-        commands = sorted(
-            commands, key=lambda x: getattr(x[1], '_command_order'))
-
-        for name, value in commands:
-            names = getattr(value, '_command_names')
-            order = getattr(value, '_command_order', 0)
-            self.log.info('Registered %dº command: %s' %
-                          (order, " ".join(names)))
-            self.commands.append(value)
-            self.delay = self.delay or getattr(value, '_command_delay', False)
-
-        self.nick = self.config['user'].split("@")[0]
+        self.nick = self.config.user.split("@")[0]
 
         self.auto_reconnect = True
-        if self.config.get("auto", False):
+        if self.config.friendly:
             self.auto_authorize = True
             self.auto_subscribe = True
 
-        plugins.add('xep_0030')  # Service Discovery
-        plugins.add('xep_0004')  # Data Forms
-        plugins.add('xep_0060')  # PubSub
-        plugins.add('xep_0199')  # XMPP Ping
-        if self.delay:
-            plugins.add('xep_0203')  # XMPP Delayed messages
-        if self.config.get('vcard', None):
-            plugins.add('xep_0054')
-        if self.config.get('avatar', None):
-            if os.path.isfile(self.config['avatar']):
-                plugins.add('xep_0084')
-                plugins.add('xep_0153')
-            else:
-                del self.config['avatar']
+        if 'xep_0203' not in self.config.plugins and self.allow_delay:
+            # XMPP Delayed messages
+            self.config.plugins = self.config.plugins + ('xep_0203', )
 
-        if self.config.get('rooms', None):
-            plugins.add('xep_0045')  # Multi-User Chat
-
-        if self.config.get('img_to_oob', False):
-            plugins.add('xep_0066')  # OOB
-
-        for plugin in plugins:
+        for plugin in self.config.plugins:
             self.register_plugin(plugin)
 
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.read_message)
         self.add_event_handler("groupchat_subject", self.groupchat_subject)
 
-        self.custom_roster = self.config.get('roster')
+    def __get_commands(self):
+        commands: list[CmdBot] = []
+        for k, v in self.__class__.__dict__.items():
+            cmd = getattr(v, 'cmd', None)
+            if isinstance(cmd, CmdBot):
+                func = getattr(self, k, None)
+                if func is not None:
+                    cmd = getattr(func, 'cmd', None)
+                    cmd.func = func
+                    commands.append(cmd)
+        commands = sorted(commands, key=lambda x: x.index)
+        for c in commands:
+            logger.info(f'Registered {c.index}º command: ' + " ".join(c.names))
+        return tuple(commands)
 
-        if not self.config.get('lisent'):
-            self.config['lisent'] = ['chat', 'normal']
-            if self.config.get('rooms', None):
-                self.config['lisent'].append('groupchat')
+    def __validate(self):
+        if not self.config.lisent:
+            raise Exception("This bot need lisent != None")
+        if not self.commands:
+            raise Exception("This bot need commands")
 
-    def start(self, event):
+    @cached_property
+    def allow_delay(self) -> bool:
+        for c in self.commands:
+            if c.delay is True:
+                return True
+        return False
+
+    async def start(self, event):
         self.send_presence()
-        self.get_roster()
-        if self.config.get('vcard', None):
-            vcard = self['xep_0054'].stanza.VCardTemp()
-            vcard['JABBERID'] = self.boundjid.bare
-            for f in self.config['vcard']:
-                vcard[f] = self.config['vcard'][f]
-                if f.upper() == 'NICKNAME':
-                    self.nick = self.config['vcard'][f]
-            self['xep_0054'].publish_vcard(vcard)
-        if self.config.get('avatar', None):
-            avatar_data = None
-            try:
-                with open(self.config['avatar'], 'rb') as avatar_file:
-                    avatar_data = avatar_file.read()
-            except IOError:
-                self.log.debug('Could not load avatar')
-            if avatar_data:
-                ext = os.path.splitext(self.config['avatar'])[1][1:]
-                mtype = 'image/' + ext
-                avatar_id = self['xep_0084'].generate_id(avatar_data)
-                info = {
-                    'id': avatar_id,
-                    'type': mtype,
-                    'bytes': len(avatar_data)
-                }
-                self['xep_0084'].publish_avatar(avatar_data)
-                self['xep_0084'].publish_avatar_metadata(items=[info])
-                self['xep_0153'].set_avatar(avatar=avatar_data, mtype=mtype)
+        await self.get_roster()
+        await self.__set_vcard()
+        await self.__set_avatar()
+        self.__join_rooms()
 
-        for room in self.config.get('rooms', []):
-            self.plugin['xep_0045'].joinMUC(room,
-                                            self.nick,
-                                            wait=True)
+    async def __set_vcard(self):
+        if self.config.vcard is None:
+            return
+        vcard = self.xep_0054.stanza.VCardTemp()
+        vcard['JABBERID'] = self.boundjid.bare
+        for k, v in self.config.vcard.items():
+            vcard[k] = v
+            if k.upper() == 'NICKNAME':
+                self.nick = v
+        await self.xep_0054.publish_vcard(vcard)
+
+    async def __set_avatar(self):
+        if self.config.avatar is None:
+            return
+        avatar = self.config.avatar
+        avatar_metadata = {
+            'id': self.xep_0084.generate_id(avatar.content),
+            'type': avatar.mtype,
+            'bytes': len(avatar.content)
+        }
+
+        used_xep84 = False
+        result = await self.xep_0084.publish_avatar(avatar.content)
+        if isinstance(result, XMPPError):
+            logger.debug('Could not publish XEP-0084 avatar')
+        else:
+            used_xep84 = True
+
+        result = await self.xep_0153.set_avatar(
+            avatar=avatar.content,
+            mtype=avatar.mtype
+        )
+        if isinstance(result, XMPPError):
+            logger.debug('Could not set vCard avatar')
+
+        if used_xep84:
+            result = await self.xep_0084.publish_avatar_metadata(
+                items=[avatar_metadata]
+            )
+            if isinstance(result, XMPPError):
+                logger.debug('Could not publish XEP-0084 metadata')
+
+        # Wait for presence updates to propagate...
+        # self.schedule('end', 5, self.disconnect, kwargs={'wait': True})
+
+    def __join_rooms(self):
+        for room in self.config.rooms:
+            self.xep_0045.join_muc(room, self.nick)
             msg = self.joined_room(room)
             if msg:
                 self.send_message(mto=room, mbody=msg, mtype='groupchat')
-
-        return None
 
     def joined_room(self, room):
         pass
@@ -167,86 +156,81 @@ class XmppBot(BaseBot):
     def groupchat_subject(self, data):
         pass
 
-    def get_match(self, regex, mode, text):
-        if mode == "findall":
-            return regex.findall(text)
-        m = None
-        if mode == "match":
-            m = regex.match(text)
-        elif mode == "search":
-            m = regex.search(text)
-        if m:
-            return m.groups()
-        return None
-
-    def get_cmd(self, msg, user, text):
-        delay = self.is_delay(msg)
-        cmd = text.split(' ', 1)[0].lower()
-        for c in self.commands:
-            if delay and not c._command_delay:
-                continue
-            if c._command_fromuser and user not in c._command_fromuser:
-                continue
-            if c._command_regex:
-                arg = self.get_match(
-                    c._command_regex, c._command_rg_mode, text)
-                if arg is not None and len(arg) > 0:
-                    return c, arg
-            elif cmd in c._command_names:
-                return c, text.split(' ')[1:]
-        return None, None
-
     def read_message(self, msg):
-        if msg['type'] not in self.config['lisent'] or not msg['body'] or not msg['from']:
+        msg: Message = Message.init(msg)
+        if self.__discard_message(msg):
             return
-        if msg['type'] == 'groupchat' and msg['from'].resource.lower() == self.nick.lower():
+        cmd = self.__get_command(msg)
+        if cmd is None:
+            logger.debug(f"Unknown command from {msg.sender}: {msg.text}")
             return
-
-        user = msg['from'].bare
-        if user == self.boundjid.bare or (self.custom_roster and user not in self.custom_roster):
-            return
-
-        text = sp.sub(" ", msg['body']).strip()
-        if len(text) == 0:
-            return
-
-        cmd, args = self.get_cmd(msg, user, text)
-        if not cmd:
-            self.log.debug("Unknown command from %s: %s" % (user, text))
-            return
-
-        self.log.debug("*** Command from %s: %s" % (user, text))
-
-        if msg['type'] == 'groupchat':
-            user = msg['from'].resource
+        logger.debug(f"Command from {msg.sender}: {msg.text}")
 
         try:
-            reply = cmd(*args, user=user, text=text, msg=msg)
+            reply = cmd.run(msg)
         except Exception as error:
-            self.log.exception('An error happened while processing '
-                               'the message: %s' % text)
-            reply = self.command_error(
-                error, *args, user=user, text=text, msg=msg)
+            logger.exception(
+                'An error happened while processing the message: ' +
+                msg.text)
+            reply = self.command_error(msg, error)
         if reply:
-            self.reply_message(msg, reply, *args, **msg)
+            self.reply_message(msg, reply)
 
-    def command_error(self, *args, **kwargs):
+    def __discard_message(self, msg):
+        if self.__is_weird_message(msg):
+            return True
+        if self.__is_from_me(msg):
+            return True
+        if not self.__is_in_my_inbox(msg):
+            return True
+        return False
+
+    def __is_weird_message(self, msg):
+        if not msg['body'] or (msg['from'] is None or not str(msg['from'])):
+            return True
+        txt = re_sp.sub(" ", msg['body']).strip()
+        if len(txt) == 0:
+            return True
+        return False
+
+    def __is_from_me(self, msg):
+        if msg['type'] == 'groupchat' and msg['from'].resource.lower(
+        ) == self.nick.lower():
+            return True
+        user = msg['from'].bare
+        if user == self.boundjid.bare:
+            return True
+        return False
+
+    def __is_in_my_inbox(self, msg):
+        if msg['type'] not in self.config.lisent:
+            return False
+        user = msg['from'].bare
+        if self.config.roster and user not in self.config.roster:
+            return False
+        return True
+
+    def __get_command(self, msg) -> CmdBot:
+        for cmd in self.commands:
+            if cmd.is_for_me(msg):
+                return cmd
+        return None
+
+    def command_error(self, msg, error):
+        if msg.sender in self.config.admin:
+            return str(error) + "\n\n" + traceback.format_exc()
         return self.MSG_ERROR_OCCURRED
 
     def tune_reply(self, txt):
         return txt
 
-    def reply_message(self, msg, txt, *args, **kwargs):
-        msgreply = msg.reply(self.tune_reply(txt))
-        _to = msgreply['to']
+    def reply_message(self, msg, txt):
+        reply = self.tune_reply(txt)
+        msgreply = msg.reply(reply)
         msgreply.send()
-        if self.config.get('img_to_oob', False):
+        if self.config.img_to_oob:
             imgs = set([i[0] for i in url_img.findall(txt)])
             for i in imgs:
                 imgreply = msg.reply()
-                imgreply['to'] = _to
                 imgreply['oob']['url'] = i
                 imgreply.send()
-
-    def is_delay(self, msg):
-        return self.delay and bool(msg['delay']._get_attr('stamp'))

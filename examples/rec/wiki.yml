@@ -1,7 +1,7 @@
 user: 'map@example.xmpp'
-pass: 'fakepassword'
-auto: True
-avatar: 'wiki.png'
+password: 'fakepassword'
+friendly: True
+avatar: 'rec/wiki.png'
 vcard:
   FN: Wikipedia
   NICKNAME: Wikipedia

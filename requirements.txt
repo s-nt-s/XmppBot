@@ -1,4 +1,0 @@
-slixmpp==1.4.2
-markdownify==0.4.1
-beautifulsoup4==4.9.3
-PyYAML==5.3.1

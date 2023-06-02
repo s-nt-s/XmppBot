@@ -1,8 +1,8 @@
 user: 'map@example.xmpp'
-pass: 'fakepassword'
-roster: ['me@example.xmpp']
+password: 'fakepassword'
+roster: ['admin@example.xmpp']
 LOG: "DEBUG"
-avatar: 'avatar.png'
+avatar: 'rec/avatar.png'
 vcard:
   FN: A Bot
   NICKNAME: Bot

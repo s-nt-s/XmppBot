@@ -1,10 +1,7 @@
 import time
 from os.path import expanduser
 
-from bs4 import BeautifulSoup, Tag
-
 from .basebot import BaseBot
-from .common import to_xep0393
 from .timeout import timeout
 
 
@@ -14,7 +11,7 @@ class SendMsgBot(BaseBot):
         self.messages = []
         self.add_event_handler("session_start", self.start)
 
-    def start(self, event):
+    async def start(self, event):
         self.send_presence()
         self.get_roster()
         while self.messages:
@@ -58,7 +55,7 @@ class XmppMsg:
             self.to = None
             return
         self.bot = SendMsgBot(config)
-        self.to = self.bot.config.get("to", self.to)
+        self.to = self.bot.config.to or self.to
 
     @property
     def to(self):
@@ -87,30 +84,12 @@ class XmppMsg:
         if value is None:
             self.bot.messages = []
             return
-        if isinstance(value, (Tag, BeautifulSoup, str)):
-            value = msg_to_xep0393(value)
         if isinstance(value, str):
             for to in self.to:
                 self.bot.messages.append((to, value))
-        elif isinstance(value, tuple):
-            msg = msg_to_xep0393(value[-1])
-            for tos in value[:-1]:
-                for to in tos.strip().split():
-                    self.bot.messages.append((to, msg))
 
     def send(self):
         self.bot.run()
 
     def reload(self, config=None):
         self.bot = SendMsgBot(config or self.bot.config)
-
-
-def msg_to_xep0393(msg):
-    if isinstance(msg, (Tag, BeautifulSoup)):
-        return to_xep0393(msg)
-    if isinstance(msg, str):
-        _msg = msg.strip().lower()
-        for tag in ("html", "p", "div", "body", "table"):
-            if _msg.startswith("<"+tag+">") and _msg.endswith("</"+tag+">"):
-                return to_xep0393(msg)
-    return msg
