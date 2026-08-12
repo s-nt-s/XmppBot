@@ -114,6 +114,7 @@ class ConfigBot:
 
     def __review_plugins(self):
         plugins = set(self.plugins)
+        plugins.add('xep_0085')  # Chat State Notifications
         if self.vcard:
             plugins.add('xep_0054')
         if self.avatar:
@@ -121,7 +122,6 @@ class ConfigBot:
             plugins.add('xep_0153')
         if self.rooms:
             plugins.add('xep_0045')  # Multi-User Chat
-        plugins.add('xep_0085')  # Chat State Notifications
         if self.img_to_oob:
             plugins.add('xep_0066')  # OOB
         self.plugins = tuple(sorted(set(plugins)))

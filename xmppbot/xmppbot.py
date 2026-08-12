@@ -236,7 +236,7 @@ class XmppBot(BaseBot):
         if msg['type'] not in ('chat', 'normal'):
             return
         state_msg = msg.reply()
-        state_msg[state] = True
+        state_msg['chat_state'] = state
         state_msg.send()
 
     def tune_reply(self, txt):

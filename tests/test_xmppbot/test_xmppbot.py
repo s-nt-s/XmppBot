@@ -98,3 +98,29 @@ def test_is_in_my_inbox():
             _from=_from
         ))
         assert bl is expected, f"{bl} is {expected} <- from={_from}"
+
+
+def test_chat_state_is_sent_as_chat_state():
+    import types
+    from xml.etree import ElementTree as ET
+
+    bot = FakeBot({
+        "user": "me@xmpp.com",
+        "password": "xxx",
+    })
+    msg = build_msg()
+    msg['type'] = 'chat'
+
+    state_msg = msg.reply()
+    sent = {}
+
+    def fake_send(self):
+        sent['xml'] = ET.tostring(self.xml, encoding='unicode')
+
+    state_msg.send = types.MethodType(fake_send, state_msg)
+    msg.reply = lambda *args, **kwargs: state_msg
+
+    bot.__send_chat_state(msg, 'composing')
+
+    assert 'composing' in sent['xml']
+    assert 'http://jabber.org/protocol/chatstates' in sent['xml']
