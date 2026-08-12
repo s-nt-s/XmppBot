@@ -167,10 +167,7 @@ class XmppBot(BaseBot):
         logger.debug(f"Command from {msg.sender}: {msg.text}")
 
         self.__send_composing(msg)
-        if hasattr(self, 'loop') and self.loop is not None:
-            self.loop.call_soon(self.__process_command, msg, cmd)
-        else:
-            self.__process_command(msg, cmd)
+        self.__process_command(msg, cmd)
 
     def __process_command(self, msg, cmd):
         try:
@@ -243,7 +240,13 @@ class XmppBot(BaseBot):
             return
         state_msg = msg.reply()
         state_msg['chat_state'] = state
-        state_msg.send()
+        try:
+            if hasattr(self, 'send_raw'):
+                self.send_raw(str(state_msg))
+            else:
+                state_msg.send()
+        except Exception:
+            state_msg.send()
 
     def tune_reply(self, txt):
         return txt
