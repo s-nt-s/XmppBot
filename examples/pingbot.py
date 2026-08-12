@@ -5,6 +5,7 @@ import os
 import re
 import logging
 from xmppbot import XmppBot, CmdSearch, CmdBot, CmdFindAll, CmdMatch
+import time
 
 
 class PingBot(XmppBot):
@@ -13,6 +14,11 @@ class PingBot(XmppBot):
     @CmdBot()
     def ping(self, *args, **kwargs):
         return "ping args={} kwargs={}".format(args, kwargs)
+
+    @CmdBot("pingSleep")
+    def pingSleep(self, *args, **kwargs):
+        time.sleep(int(args[0]) if args else 1)
+        return "pingSleep args={} kwargs={}".format(args, kwargs)
 
     @CmdBot("pingX", "pingY")
     def ping1(self, *args, **kwargs):
@@ -33,9 +39,13 @@ class PingBot(XmppBot):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
+    import sys
 
     path = os.path.realpath(__file__)
     path = os.path.dirname(path)
     os.chdir(path)
-    xmpp = PingBot("rec/ping.yml")
+    path = "rec/ping.yml"
+    if sys.argv[1:]:
+        path = sys.argv[1]
+    xmpp = PingBot(path)
     xmpp.run()

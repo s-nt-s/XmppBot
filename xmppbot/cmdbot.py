@@ -122,6 +122,10 @@ class CmdBot:
         names = self.__names or [self.__func.__name__]
         return tuple(map(str.lower, names))
 
+    @property
+    def isDelay(self):
+        return self.__delay
+
 
 class CmdRegExp(CmdBot):
     def __init__(self, regex: str | re.Pattern, *args, flags=0, **kwargs):

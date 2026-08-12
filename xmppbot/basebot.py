@@ -52,15 +52,25 @@ class BaseBot(ClientXMPP):
         self.config = ConfigBot.init(config_path)
         super().__init__(self.config.user, self.config.password)
         self.use_ipv6 = self.config.use_ipv6
+        self.__auth_failed = False
+        self.add_event_handler('failed_auth', self._on_failed_auth)
+        self.add_event_handler('auth_failed', self._on_failed_auth)
 
     def run(self, loop=True):
         while True:
             self.connect()
             logger.info("Bot started.")
             self.loop.run_until_complete(self.disconnected)
+            if self.__auth_failed:
+                logger.error('Authentication failed: stopping retries.')
+                return
             if not loop:
                 return
-            time.sleep(5)
+            time.sleep(20)
+
+    def _on_failed_auth(self, *args, **kwargs):
+        self.__auth_failed = True
+        logger.error('Received failed authentication event')
 
     def connection_lost(self, *args, **kwargs):
         super().connection_lost(*args, **kwargs)

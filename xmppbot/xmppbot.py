@@ -90,7 +90,7 @@ class XmppBot(BaseBot):
     @cached_property
     def allow_delay(self) -> bool:
         for c in self.commands:
-            if c.delay is True:
+            if c.isDelay is True:
                 return True
         return False
 
@@ -168,8 +168,7 @@ class XmppBot(BaseBot):
             logger.debug(f"Unknown command from {msg.sender}: {msg.text}")
             return
         logger.debug(f"Command from {msg.sender}: {msg.text}")
-
-        self.__process_command(msg, cmd)
+        asyncio.create_task(self.__process_command(msg, cmd))
 
     async def __process_command(self, msg: Message, cmd: CmdBot):
         jid = str(msg['from'].bare)
@@ -181,7 +180,7 @@ class XmppBot(BaseBot):
             self.__send_chat_state(msg, 'composing')
             try:
                 reply = await asyncio.to_thread(
-                    cmd.run(msg)
+                    lambda *lbarg, **lbkwargs: cmd.run(msg)
                 )
                 if reply:
                     return self.reply_message(msg, reply)
@@ -249,6 +248,7 @@ class XmppBot(BaseBot):
 
     def reply_message(self, msg: Message, txt: str):
         reply = self.tune_reply(txt)
+        self.__send_chat_state(msg, 'active')
         msgreply = msg.reply(reply)
         msgreply.send()
         if self.config.img_to_oob:
