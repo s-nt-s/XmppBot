@@ -167,6 +167,12 @@ class XmppBot(BaseBot):
         logger.debug(f"Command from {msg.sender}: {msg.text}")
 
         self.__send_composing(msg)
+        if hasattr(self, 'loop') and self.loop is not None:
+            self.loop.call_soon(self.__process_command, msg, cmd)
+        else:
+            self.__process_command(msg, cmd)
+
+    def __process_command(self, msg, cmd):
         try:
             reply = cmd.run(msg)
             if reply:
