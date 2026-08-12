@@ -182,6 +182,8 @@ class XmppBot(BaseBot):
                 reply = await asyncio.to_thread(
                     lambda *lbarg, **lbkwargs: cmd.run(msg)
                 )
+                if reply is True:
+                    return
                 if reply:
                     return self.reply_message(msg, reply)
             except Exception as error:
