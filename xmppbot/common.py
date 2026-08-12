@@ -1,4 +1,4 @@
-def to_tuple(s, *default) -> tuple[str]:
+def to_tuple(s: str | list | set | tuple, *default) -> tuple[str]:
     if s is None:
         return default
     if isinstance(s, tuple):
@@ -8,4 +8,4 @@ def to_tuple(s, *default) -> tuple[str]:
     if isinstance(s, str):
         arr = s.strip().split()
         return tuple(arr)
-    raise TypeError()
+    raise TypeError(s)
