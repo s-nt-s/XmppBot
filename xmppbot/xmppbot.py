@@ -166,15 +166,20 @@ class XmppBot(BaseBot):
             return
         logger.debug(f"Command from {msg.sender}: {msg.text}")
 
+        self.__send_composing(msg)
         try:
             reply = cmd.run(msg)
+            if reply:
+                self.reply_message(msg, reply)
         except Exception as error:
             logger.exception(
                 'An error happened while processing the message: ' +
                 msg.text)
             reply = self.command_error(msg, error)
-        if reply:
-            self.reply_message(msg, reply)
+            if reply:
+                self.reply_message(msg, reply)
+        finally:
+            self.__send_paused(msg)
 
     def __discard_message(self, msg):
         if self.__is_weird_message(msg):
@@ -220,6 +225,19 @@ class XmppBot(BaseBot):
         if msg.sender in self.config.admin:
             return str(error) + "\n\n" + traceback.format_exc()
         return self.MSG_ERROR_OCCURRED
+
+    def __send_composing(self, msg):
+        self.__send_chat_state(msg, 'composing')
+
+    def __send_paused(self, msg):
+        self.__send_chat_state(msg, 'paused')
+
+    def __send_chat_state(self, msg, state):
+        if msg['type'] not in ('chat', 'normal'):
+            return
+        state_msg = msg.reply()
+        state_msg[state] = True
+        state_msg.send()
 
     def tune_reply(self, txt):
         return txt

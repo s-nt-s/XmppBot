@@ -5,7 +5,7 @@ or customize the bot’s operation completely. MUCs are also supported.
 
 You can see some examples in [`examples` folder](https://github.com/s-nt-s/XmppBot/tree/master/examples).
 
-You can install and unsintall with:
+You can install and uninstall with:
 
 ```
 # install

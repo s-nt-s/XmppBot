@@ -9,6 +9,7 @@ from slixmpp.plugins.xep_0203.delay import XEP_0203
 from slixmpp.plugins.xep_0084.avatar import XEP_0084
 from slixmpp.plugins.xep_0153.vcard_avatar import XEP_0153
 from slixmpp.plugins.xep_0045.muc import XEP_0045
+from slixmpp.plugins.xep_0085.chat_states import XEP_0085
 import re
 
 
@@ -79,6 +80,10 @@ class BaseBot(slixmpp.ClientXMPP):
     @property
     def xep_0153(self) -> XEP_0153:
         return self['xep_0153']
+
+    @property
+    def xep_0085(self) -> XEP_0085:
+        return self['xep_0085']
 
     @property
     def xep_0045(self) -> XEP_0045:
