@@ -32,6 +32,7 @@ from slixmpp.stanza import Message as sliMessage
 
 from .cmdbot import CmdBot
 from .basebot import BaseBot, Message
+from .common import iter_max
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +186,7 @@ class XmppBot(BaseBot):
                 if reply is True:
                     return
                 if reply:
-                    return self.reply_message(msg, reply)
+                    return self.reply_message(msg, reply, raw=cmd.isRaw)
             except Exception as error:
                 logger.exception(
                     'An error happened while processing the message: ' +
@@ -248,11 +249,16 @@ class XmppBot(BaseBot):
     def tune_reply(self, txt: str) -> str:
         return txt
 
-    def reply_message(self, msg: Message, txt: str):
-        reply = self.tune_reply(txt)
+    def reply_message(self, msg: Message, txt: str, raw: bool = False):
+        delta = 0
+        if not raw and self.config.max_length > 0:
+            delta = len(self.tune_reply(""))
         self.__send_chat_state(msg, 'active')
-        msgreply = msg.reply(reply)
-        msgreply.send()
+        for reply in iter_max(txt, self.config.max_length-delta):
+            if not raw:
+                reply = self.tune_reply(reply)
+            msgreply = msg.reply(reply)
+            msgreply.send()
         if self.config.img_to_oob:
             imgs = set([i[0] for i in url_img.findall(txt)])
             for i in imgs:

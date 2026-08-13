@@ -36,13 +36,15 @@ class CmdBot:
         self,
         *names: str,
         delay: bool = False,
-        users: str | list[str] = None
+        users: str | list[str] = None,
+        raw: bool = False,
     ):
         CmdBot.INDEX += 1
         self.index = CmdBot.INDEX
         self.__func = None
         self.__delay = delay
         self.__users = to_tuple(users)
+        self.__raw = raw
         self.__names = names
         self.__msg_parameter = None
         self.__need_arguments = True
@@ -125,6 +127,10 @@ class CmdBot:
     @property
     def isDelay(self):
         return self.__delay
+
+    @property
+    def isRaw(self):
+        return self.__raw
 
 
 class CmdRegExp(CmdBot):

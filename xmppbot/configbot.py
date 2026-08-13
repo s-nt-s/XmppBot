@@ -85,7 +85,8 @@ class ConfigBot:
         to: str | list[str] = None,
         friendly: bool = False,
         use_ipv6: bool = True,
-        img_to_oob: bool = False
+        img_to_oob: bool = False,
+        max_length: int = -1
     ):
         self.user = user
         self.password = password
@@ -93,6 +94,7 @@ class ConfigBot:
         self.use_ipv6 = use_ipv6
         self.img_to_oob = img_to_oob
         self.vcard = vcard
+        self.max_length = max_length
         self.avatar = Avatar.init(avatar)
         self.roster = to_tuple(roster)
         self.rooms = to_tuple(rooms)
