@@ -51,8 +51,9 @@ class ConfigBot:
         'xep_0004',  # Data Forms
         'xep_0060',  # PubSub
         'xep_0199',  # XMPP Ping
+        'xep_0085',  # Chat State Notifications
     )
-    DEFAULT_LISENT = (
+    DEFAULT_LISTENED = (
         'chat',
         'normal'
     )
@@ -71,31 +72,34 @@ class ConfigBot:
         raise Exception("Config must be a str or dict")
 
     def __init__(
-            self,
-            user: str,
-            password: str,
-            vcard: dict = None,
-            avatar: str = None,
-            roster: str | list[str] = None,
-            rooms: str | list[str] = None,
-            admin: str | list[str] = None,
-            plugins: str | list[str] = DEFAULT_PLUGINS,
-            lisent: str | list[str] = DEFAULT_LISENT,
-            to: str | list[str] = None,
-            friendly: bool = False,
-            use_ipv6: bool = True,
-            img_to_oob: bool = False):
+        self,
+        user: str,
+        password: str,
+        vcard: dict = None,
+        avatar: str = None,
+        roster: str | list[str] = None,
+        rooms: str | list[str] = None,
+        admin: str | list[str] = None,
+        plugins: str | list[str] = DEFAULT_PLUGINS,
+        listened: str | list[str] = DEFAULT_LISTENED,
+        to: str | list[str] = None,
+        friendly: bool = False,
+        use_ipv6: bool = True,
+        img_to_oob: bool = False,
+        max_length: int = -1
+    ):
         self.user = user
         self.password = password
         self.friendly = friendly
         self.use_ipv6 = use_ipv6
         self.img_to_oob = img_to_oob
         self.vcard = vcard
+        self.max_length = max_length
         self.avatar = Avatar.init(avatar)
         self.roster = to_tuple(roster)
         self.rooms = to_tuple(rooms)
         self.plugins = to_tuple(plugins)
-        self.lisent = to_tuple(lisent)
+        self.listened = to_tuple(listened)
         self.admin = to_tuple(admin)
         self.to = to_tuple(to)
         self.__validate()
@@ -109,12 +113,13 @@ class ConfigBot:
             raise ValueError("password must be a str")
 
     def __review_lisent(self):
-        if self.rooms and 'groupchat' not in self.lisent:
-            self.lisent = self.lisent + ('groupchat',)
+        if self.rooms and 'groupchat' not in self.listened:
+            self.listened = self.listened + ('groupchat',)
 
     def __review_plugins(self):
         plugins = set(self.plugins)
-        plugins.add('xep_0085')  # Chat State Notifications
+        if self.rooms:
+            self.register_plugin('xep_0045')  # Multi-User Chat
         if self.vcard:
             plugins.add('xep_0054')
         if self.avatar:

@@ -1,7 +1,6 @@
 import logging
 import time
 
-import slixmpp
 from functools import cached_property
 from slixmpp.plugins import xep_0203
 from slixmpp.plugins.xep_0054.vcard_temp import XEP_0054
@@ -10,6 +9,8 @@ from slixmpp.plugins.xep_0084.avatar import XEP_0084
 from slixmpp.plugins.xep_0153.vcard_avatar import XEP_0153
 from slixmpp.plugins.xep_0045.muc import XEP_0045
 from slixmpp.plugins.xep_0085.chat_states import XEP_0085
+from slixmpp.stanza import Message as sliMessage
+from slixmpp import ClientXMPP
 import re
 
 
@@ -19,13 +20,13 @@ logger = logging.getLogger(__name__)
 re_sp = re.compile(r"\s+")
 
 
-class Message(slixmpp.stanza.Message):
+class Message(sliMessage):
 
-    @classmethod
-    def init(cls, msg: slixmpp.stanza.Message):
-        msg.__class__ = cls
-        new_msg: cls = msg
-        if not isinstance(new_msg, cls):
+    @staticmethod
+    def init(msg: sliMessage):
+        msg.__class__ = Message
+        new_msg: Message = msg
+        if not isinstance(new_msg, Message):
             return None
         return new_msg
 
@@ -46,20 +47,30 @@ class Message(slixmpp.stanza.Message):
             self['delay']._get_attr('stamp'))
 
 
-class BaseBot(slixmpp.ClientXMPP):
-    def __init__(self, config_path):
+class BaseBot(ClientXMPP):
+    def __init__(self, config_path: str):
         self.config = ConfigBot.init(config_path)
         super().__init__(self.config.user, self.config.password)
         self.use_ipv6 = self.config.use_ipv6
+        self.__auth_failed = False
+        self.add_event_handler('failed_auth', self._on_failed_auth)
+        self.add_event_handler('auth_failed', self._on_failed_auth)
 
     def run(self, loop=True):
         while True:
             self.connect()
             logger.info("Bot started.")
             self.loop.run_until_complete(self.disconnected)
+            if self.__auth_failed:
+                logger.error('Authentication failed: stopping retries.')
+                return
             if not loop:
                 return
-            time.sleep(5)
+            time.sleep(20)
+
+    def _on_failed_auth(self, *args, **kwargs):
+        self.__auth_failed = True
+        logger.error('Received failed authentication event')
 
     def connection_lost(self, *args, **kwargs):
         super().connection_lost(*args, **kwargs)

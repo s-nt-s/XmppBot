@@ -33,31 +33,34 @@ class CmdBot:
     INDEX = 0
 
     def __init__(
-            self,
-            *names: str,
-            delay: bool = False,
-            users: str | list[str] = None):
+        self,
+        *names: str,
+        delay: bool = False,
+        users: str | list[str] = None,
+        raw: bool = False,
+    ):
         CmdBot.INDEX += 1
         self.index = CmdBot.INDEX
-        self.func = None
-        self.delay = delay
-        self.users = to_tuple(users)
-        self.__name = names
-        self.msg_parameter = None
-        self.need_arguments = True
+        self.__func = None
+        self.__delay = delay
+        self.__users = to_tuple(users)
+        self.__raw = raw
+        self.__names = names
+        self.__msg_parameter = None
+        self.__need_arguments = True
         self.__validate()
 
     def __validate(self):
-        for n in self.__name:
+        for n in self.__names:
             if not isinstance(n, str) or len(n.split()) > 1:
                 raise ValueError("name must to be a str without spaces")
 
     def is_for_me(self, msg: Message) -> bool:
-        if not callable(self.func):
+        if not callable(self.__func):
             raise Exception("func is not callable")
-        if not (self.delay) and msg.is_delay:
+        if not (self.__delay) and msg.is_delay:
             return False
-        if self.users and msg.sender not in self.users:
+        if self.__users and msg.sender not in self.__users:
             return False
         try:
             self.extract_args(msg.text)
@@ -66,35 +69,35 @@ class CmdBot:
         return True
 
     def __call__(self, func):
-        self.func = func
+        self.__func = func
         self.__review_parameters()
         setattr(func, 'cmd', self)
         return func
 
     def __review_parameters(self):
-        spec = getfullargspec(self.func)
+        spec = getfullargspec(self.__func)
         args = spec.args[1:]  # avoid count self
         count = countitems(args, spec.kwonlyargs, spec.varargs, spec.varkw)
         for k, v in spec.annotations.items():
             if issubclass(v, sliMessage):
-                if self.msg_parameter is not None:
+                if self.__msg_parameter is not None:
                     raise BadMessageArgument(
                         f"You can only have one single {sliMessage.__name__} argument")
                 if k in args and args[0] != k:
                     raise BadMessageArgument(
                         f"{sliMessage.__name__} argument must to be the first no-named args or a kwargs")
                 if k in args:
-                    self.msg_parameter = True
+                    self.__msg_parameter = True
                 else:
-                    self.msg_parameter = k
+                    self.__msg_parameter = k
                 count -= 1
-        self.need_arguments = bool(count)
+        self.__need_arguments = bool(count)
 
     def run(self, msg: Message):
         args, kwargs = self.extract_args(msg.text)
         args = args or tuple()
         kwargs = kwargs or dict()
-        if not self.need_arguments:
+        if not self.__need_arguments:
             args = tuple()
             kwargs = dict()
         args, kwargs = self.__add_parameters(args, kwargs, msg)
@@ -109,25 +112,33 @@ class CmdBot:
         return tuple(spl), None
 
     def __add_parameters(self, args, kwargs, msg):
-        if isinstance(self.msg_parameter, str):
-            if self.msg_parameter:
-                kwargs[self.msg_parameter] = msg
-        elif self.msg_parameter is True:
+        if isinstance(self.__msg_parameter, str):
+            if self.__msg_parameter:
+                kwargs[self.__msg_parameter] = msg
+        elif self.__msg_parameter is True:
             args = (msg, ) + args
         return args, kwargs
 
     @property
     def names(self):
-        names = self.__name or [self.func.__name__]
+        names = self.__names or [self.__func.__name__]
         return tuple(map(str.lower, names))
+
+    @property
+    def isDelay(self):
+        return self.__delay
+
+    @property
+    def isRaw(self):
+        return self.__raw
 
 
 class CmdRegExp(CmdBot):
     def __init__(self, regex: str | re.Pattern, *args, flags=0, **kwargs):
         super().__init__(*args, **kwargs)
-        self.regex = regex
+        self._regex = regex
         if isinstance(regex, str):
-            self.regex = re.compile(regex, flags=flags)
+            self._regex = re.compile(regex, flags=flags)
 
     def extract_args(*args, **kwargs):
         raise NotImplementedError()
@@ -135,7 +146,7 @@ class CmdRegExp(CmdBot):
 
 class CmdMatch(CmdRegExp):
     def extract_args(self, txt):
-        m = self.regex.match(txt)
+        m = self._regex.match(txt)
         if m is None:
             raise NotForMeException()
         return tuple(m.groups()), m.groupdict()
@@ -151,7 +162,7 @@ class CmdSearch(CmdRegExp):
 
 class CmdFindAll(CmdRegExp):
     def extract_args(self, txt):
-        m = tuple(self.regex.findall(txt))
+        m = tuple(self._regex.findall(txt))
         if len(m) == 0:
             raise NotForMeException()
         return m, None

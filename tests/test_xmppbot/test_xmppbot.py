@@ -75,7 +75,7 @@ def test_is_in_my_inbox():
     bot = FakeBot({
         "user": "me@xmpp.com",
         "password": "xxx",
-        "lisent": ('chat',)
+        "listened": ('chat',)
     })
     for _type, expected in {
         "chat": True,

@@ -8,8 +8,6 @@ from .timeout import timeout
 class SendMsgBot(BaseBot):
     def __init__(self, config_path):
         super().__init__(config_path)
-        if self.config.rooms:
-            self.register_plugin('xep_0045')  # Multi-User Chat
         self.messages = []
         self.add_event_handler("session_start", self.start)
 

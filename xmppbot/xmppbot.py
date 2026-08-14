@@ -27,9 +27,12 @@ import re
 from functools import cached_property
 from slixmpp.exceptions import XMPPError
 import traceback
+import asyncio
+from slixmpp.stanza import Message as sliMessage
 
 from .cmdbot import CmdBot
 from .basebot import BaseBot, Message
+from .common import iter_max
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +43,13 @@ url_img = re.compile(r"(https?://\S+\.(gif|png|jpe?g)\S*)", re.IGNORECASE)
 class XmppBot(BaseBot):
     MSG_ERROR_OCCURRED = "ERROR!!"
 
-    def __init__(self, config_path):
+    def __init__(self, config_path: str):
         super().__init__(config_path)
+        self.__locks: dict[str, asyncio.Lock] = {}
         self.commands = self.__get_commands()
         self.__validate()
 
-        self.nick = self.config.user.split("@")[0]
+        self.__nick = self.config.user.split("@")[0]
 
         self.auto_reconnect = True
         if self.config.friendly:
@@ -79,15 +83,15 @@ class XmppBot(BaseBot):
         return tuple(commands)
 
     def __validate(self):
-        if not self.config.lisent:
-            raise Exception("This bot need lisent != None")
+        if not self.config.listened:
+            raise Exception("This bot need listened != None")
         if not self.commands:
             raise Exception("This bot need commands")
 
     @cached_property
     def allow_delay(self) -> bool:
         for c in self.commands:
-            if c.delay is True:
+            if c.isDelay is True:
                 return True
         return False
 
@@ -106,7 +110,7 @@ class XmppBot(BaseBot):
         for k, v in self.config.vcard.items():
             vcard[k] = v
             if k.upper() == 'NICKNAME':
-                self.nick = v
+                self.__nick = v
         await self.xep_0054.publish_vcard(vcard)
 
     async def __set_avatar(self):
@@ -145,18 +149,18 @@ class XmppBot(BaseBot):
 
     def __join_rooms(self):
         for room in self.config.rooms:
-            self.xep_0045.join_muc(room, self.nick)
+            self.xep_0045.join_muc(room, self.__nick)
             msg = self.joined_room(room)
             if msg:
                 self.send_message(mto=room, mbody=msg, mtype='groupchat')
 
-    def joined_room(self, room):
+    def joined_room(self, room: str):
         pass
 
     def groupchat_subject(self, data):
         pass
 
-    def read_message(self, msg):
+    def read_message(self, msg: sliMessage):
         msg: Message = Message.init(msg)
         if self.__discard_message(msg):
             return
@@ -165,26 +169,34 @@ class XmppBot(BaseBot):
             logger.debug(f"Unknown command from {msg.sender}: {msg.text}")
             return
         logger.debug(f"Command from {msg.sender}: {msg.text}")
+        asyncio.create_task(self.__process_command(msg, cmd))
 
-        self.__send_composing(msg)
-        self.__process_command(msg, cmd)
+    async def __process_command(self, msg: Message, cmd: CmdBot):
+        jid = str(msg['from'].bare)
 
-    def __process_command(self, msg, cmd):
-        try:
-            reply = cmd.run(msg)
-            if reply:
-                self.reply_message(msg, reply)
-        except Exception as error:
-            logger.exception(
-                'An error happened while processing the message: ' +
-                msg.text)
-            reply = self.command_error(msg, error)
-            if reply:
-                self.reply_message(msg, reply)
-        finally:
-            self.__send_paused(msg)
+        if jid not in self.__locks:
+            self.__locks[jid] = asyncio.Lock()
 
-    def __discard_message(self, msg):
+        async with self.__locks[jid]:
+            self.__send_chat_state(msg, 'composing')
+            try:
+                reply = await asyncio.to_thread(
+                    lambda *lbarg, **lbkwargs: cmd.run(msg)
+                )
+                if reply is True:
+                    return
+                if reply:
+                    return self.reply_message(msg, reply, raw=cmd.isRaw)
+            except Exception as error:
+                logger.exception(
+                    'An error happened while processing the message: ' +
+                    msg.text)
+                reply = self.command_error(msg, error)
+                if reply:
+                    return self.reply_message(msg, reply)
+            self.__send_chat_state(msg, 'paused')
+
+    def __discard_message(self, msg: Message) -> bool:
         if self.__is_weird_message(msg):
             return True
         if self.__is_from_me(msg):
@@ -193,7 +205,7 @@ class XmppBot(BaseBot):
             return True
         return False
 
-    def __is_weird_message(self, msg):
+    def __is_weird_message(self, msg: Message) -> bool:
         if not msg['body'] or (msg['from'] is None or not str(msg['from'])):
             return True
         txt = re_sp.sub(" ", msg['body']).strip()
@@ -201,60 +213,52 @@ class XmppBot(BaseBot):
             return True
         return False
 
-    def __is_from_me(self, msg):
+    def __is_from_me(self, msg: Message) -> bool:
         if msg['type'] == 'groupchat' and msg['from'].resource.lower(
-        ) == self.nick.lower():
+        ) == self.__nick.lower():
             return True
         user = msg['from'].bare
         if user == self.boundjid.bare:
             return True
         return False
 
-    def __is_in_my_inbox(self, msg):
-        if msg['type'] not in self.config.lisent:
+    def __is_in_my_inbox(self, msg: Message) -> bool:
+        if msg['type'] not in self.config.listened:
             return False
         user = msg['from'].bare
         if self.config.roster and user not in self.config.roster:
             return False
         return True
 
-    def __get_command(self, msg) -> CmdBot:
+    def __get_command(self, msg: Message) -> CmdBot:
         for cmd in self.commands:
             if cmd.is_for_me(msg):
                 return cmd
         return None
 
-    def command_error(self, msg, error):
+    def command_error(self, msg: Message, error: Exception):
         if msg.sender in self.config.admin:
             return str(error) + "\n\n" + traceback.format_exc()
         return self.MSG_ERROR_OCCURRED
 
-    def __send_composing(self, msg):
-        self.__send_chat_state(msg, 'composing')
-
-    def __send_paused(self, msg):
-        self.__send_chat_state(msg, 'paused')
-
-    def __send_chat_state(self, msg, state):
-        if msg['type'] not in ('chat', 'normal'):
-            return
+    def __send_chat_state(self, msg: Message, state: str):
         state_msg = msg.reply()
         state_msg['chat_state'] = state
-        try:
-            if hasattr(self, 'send_raw'):
-                self.send_raw(str(state_msg))
-            else:
-                state_msg.send()
-        except Exception:
-            state_msg.send()
+        state_msg.send()
 
-    def tune_reply(self, txt):
+    def tune_reply(self, txt: str) -> str:
         return txt
 
-    def reply_message(self, msg, txt):
-        reply = self.tune_reply(txt)
-        msgreply = msg.reply(reply)
-        msgreply.send()
+    def reply_message(self, msg: Message, txt: str, raw: bool = False):
+        delta = 0
+        if not raw and self.config.max_length > 0:
+            delta = len(self.tune_reply(""))
+        self.__send_chat_state(msg, 'active')
+        for reply in iter_max(txt, self.config.max_length-delta):
+            if not raw:
+                reply = self.tune_reply(reply)
+            msgreply = msg.reply(reply)
+            msgreply.send()
         if self.config.img_to_oob:
             imgs = set([i[0] for i in url_img.findall(txt)])
             for i in imgs:
