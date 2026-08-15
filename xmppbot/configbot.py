@@ -118,8 +118,6 @@ class ConfigBot:
 
     def __review_plugins(self):
         plugins = set(self.plugins)
-        if self.rooms:
-            plugins.add('xep_0045')  # Multi-User Chat
         if self.vcard:
             plugins.add('xep_0054')
         if self.avatar:
