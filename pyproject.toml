@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "slixmppbot"
-version = "3.0.0"
+version = "3.0.1"
 description = "A framework for writing Jabber/XMPP bots"
 authors = ["s-nt-s <santos82h@gmail.com>"]
 license = "GPLv3"
