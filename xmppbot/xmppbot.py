@@ -183,8 +183,6 @@ class XmppBot(BaseBot):
                 reply = await asyncio.to_thread(
                     lambda *lbarg, **lbkwargs: cmd.run(msg)
                 )
-                if reply is True:
-                    return
                 if reply:
                     return self.reply_message(msg, reply, raw=cmd.isRaw)
             except Exception as error:
@@ -194,7 +192,8 @@ class XmppBot(BaseBot):
                 reply = self.command_error(msg, error)
                 if reply:
                     return self.reply_message(msg, reply)
-            self.__send_chat_state(msg, 'paused')
+            # self.__send_chat_state(msg, 'paused')
+            self.__send_chat_state(msg, 'active')
 
     def __discard_message(self, msg: Message) -> bool:
         if self.__is_weird_message(msg):
