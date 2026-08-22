@@ -154,7 +154,7 @@ class CmdMatch(CmdRegExp):
 
 class CmdSearch(CmdRegExp):
     def extract_args(self, txt):
-        m = self.regex.search(txt)
+        m = self._regex.search(txt)
         if not m:
             raise NotForMeException()
         return tuple(m.groups()), m.groupdict()
